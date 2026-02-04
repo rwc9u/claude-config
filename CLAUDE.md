@@ -171,7 +171,7 @@ This repository is designed to be referenced globally or copied into projects:
 
 **Automated (Recommended):**
 ```bash
-cd ~/Code/claude-config
+cd <path-to-claude-config>
 rake setup
 ```
 
@@ -179,13 +179,13 @@ rake setup
 Add to `~/.claude/CLAUDE.md`:
 
 ```markdown
-For all projects, follow the guidelines in ~/Code/claude-config/AGENTS.md
+For all projects, follow the guidelines in <path-to-claude-config>/AGENTS.md
 
 When working on specific technologies, reference:
-- Ruby/Rails: ~/Code/claude-config/guidelines/ruby-rails.md
-- JavaScript: ~/Code/claude-config/guidelines/javascript.md
-- Testing: ~/Code/claude-config/guidelines/testing.md
-- Git workflow: ~/Code/claude-config/guidelines/git-workflow.md
+- Ruby/Rails: <path-to-claude-config>/guidelines/ruby-rails.md
+- JavaScript: <path-to-claude-config>/guidelines/javascript.md
+- Testing: <path-to-claude-config>/guidelines/testing.md
+- Git workflow: <path-to-claude-config>/guidelines/git-workflow.md
 ```
 
 ### Project-Specific Setup
@@ -193,13 +193,13 @@ Copy relevant files to `.claude/` in project directory:
 
 ```bash
 # Copy all commands
-cp -r ~/Code/claude-config/commands /path/to/project/.claude/
+cp -r <path-to-claude-config>/commands /path/to/project/.claude/
 
 # Copy agents
-cp -r ~/Code/claude-config/agents /path/to/project/.claude/
+cp -r <path-to-claude-config>/agents /path/to/project/.claude/
 
 # Copy AGENTS.md to project root
-cp ~/Code/claude-config/AGENTS.md /path/to/project/
+cp <path-to-claude-config>/AGENTS.md /path/to/project/
 ```
 
 ## Testing Changes

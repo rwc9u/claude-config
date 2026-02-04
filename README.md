@@ -46,7 +46,7 @@ claude-config/
 **Automated Setup (Easiest):**
 ```bash
 # Clone or navigate to this repository
-cd ~/Code/claude-config
+cd <path-to-claude-config>
 
 # Run the automated setup
 rake setup
@@ -63,16 +63,16 @@ rake uninstall
 **Manual Setup (Alternative):**
 ```bash
 # Reference this repo in your global Claude Code config
-echo "For all projects, follow guidelines in ~/Code/claude-config/AGENTS.md" >> ~/.claude/CLAUDE.md
+echo "For all projects, follow guidelines in <path-to-claude-config>/AGENTS.md" >> ~/.claude/CLAUDE.md
 ```
 
 **Project-Specific Setup:**
 ```bash
 # Copy commands to use in a specific project
-cp -r ~/Code/claude-config/commands /path/to/project/.claude/
+cp -r <path-to-claude-config>/commands /path/to/project/.claude/
 
 # Copy AGENTS.md to project root for project-specific context
-cp ~/Code/claude-config/AGENTS.md /path/to/project/
+cp <path-to-claude-config>/AGENTS.md /path/to/project/
 ```
 
 ### For AI Agents Reading This
@@ -92,8 +92,8 @@ cp ~/Code/claude-config/AGENTS.md /path/to/project/
 
 1. **Clone this repository:**
    ```bash
-   git clone https://github.com/your-username/claude-config.git ~/Code/claude-config
-   cd ~/Code/claude-config
+   git clone https://github.com/<your-username>/claude-config.git ~/.claude-config
+   cd ~/.claude-config
    ```
 
 2. **Run automated setup:**
@@ -310,7 +310,7 @@ Git best practices covering:
 
 **Option 1: Automated (Recommended):**
 ```bash
-cd ~/Code/claude-config
+cd <path-to-claude-config>
 rake setup
 ```
 
@@ -320,13 +320,13 @@ Add to `~/.claude/CLAUDE.md`:
 ```markdown
 # Global Agent Instructions
 
-For all projects, follow the guidelines in ~/Code/claude-config/AGENTS.md
+For all projects, follow the guidelines in <path-to-claude-config>/AGENTS.md
 
 When working on specific technologies, reference:
-- Ruby/Rails: ~/Code/claude-config/guidelines/ruby-rails.md
-- JavaScript: ~/Code/claude-config/guidelines/javascript.md
-- Testing: ~/Code/claude-config/guidelines/testing.md
-- Git workflow: ~/Code/claude-config/guidelines/git-workflow.md
+- Ruby/Rails: <path-to-claude-config>/guidelines/ruby-rails.md
+- JavaScript: <path-to-claude-config>/guidelines/javascript.md
+- Testing: <path-to-claude-config>/guidelines/testing.md
+- Git workflow: <path-to-claude-config>/guidelines/git-workflow.md
 ```
 
 ### Project-Specific Setup
@@ -336,7 +336,7 @@ When working on specific technologies, reference:
 # my-project/AGENTS.md
 
 ## General Guidelines
-Follow universal guidelines: ~/Code/claude-config/AGENTS.md
+Follow universal guidelines: <path-to-claude-config>/AGENTS.md
 
 ## Project-Specific
 - Tech: Rails 7 + Hotwire + PostgreSQL
@@ -347,8 +347,8 @@ Follow universal guidelines: ~/Code/claude-config/AGENTS.md
 **Option 2: Copy commands locally**
 ```bash
 # Use slash commands in specific project
-cp -r ~/Code/claude-config/commands /path/to/project/.claude/
-cp ~/Code/claude-config/agents/* /path/to/project/.claude/agents/
+cp -r <path-to-claude-config>/commands /path/to/project/.claude/
+cp <path-to-claude-config>/agents/* /path/to/project/.claude/agents/
 ```
 
 ## Customization & Extension

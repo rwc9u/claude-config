@@ -29,7 +29,6 @@ You are tasked with creating a pull request for the current branch.
    - [ ] Test item 1
    - [ ] Test item 2
 
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
    EOF
    )"
    ```
