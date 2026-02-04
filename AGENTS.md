@@ -171,7 +171,7 @@ See [guidelines/testing.md](guidelines/testing.md) for comprehensive testing gui
 
 ### When to Use Tools
 - **Context7 (ALWAYS prefer first)**: Use for all library documentation, code examples, and setup steps. Always check Context7 before searching the web
-- **Issue tracking**: Check available MCPs (Linear, Jira). If both available, ask user which to use
+- **Issue tracking**: Check available MCPs (Linear). If both available, ask user which to use
 - **GitHub CLI (`gh`)**: Use for PR and issue management operations
 
 ### Code Comments and Logging
@@ -184,7 +184,7 @@ See [guidelines/testing.md](guidelines/testing.md) for comprehensive testing gui
 ## Learning & Documentation
 
 ### Capture Knowledge
-- **Keep a Journal**: Track insights, decisions, and learnings throughout development
+- **Keep a Journal**: Track insights, decisions, and learnings throughout development. Prefer ~/dev/notes/ subdirectory.
 - **Document Architecture Decisions**: Record why architectural choices were made, not just what was built
 - **Technical Learnings**: Note lessons learned from debugging, performance issues, or complex implementations
 - **Pattern Recognition**: Document recurring patterns or anti-patterns discovered in the codebase
@@ -207,7 +207,9 @@ See [guidelines/testing.md](guidelines/testing.md) for comprehensive testing gui
 ## Implementation Checklist
 
 Before completing any code change:
-- [ ] Working on a feature branch (never commit to main)
+- [ ] Working on a feature branch (never commit to main, never force push to main)
+- [ ] always ask before running `rm`
+- [ ] always ask before running `kubectl delete`
 - [ ] Tests are written and passing
 - [ ] Code follows existing project conventions
 - [ ] External dependencies are mocked appropriately
