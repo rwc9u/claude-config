@@ -106,7 +106,7 @@ cp <path-to-claude-config>/AGENTS.md /path/to/project/
    - Symlink `AGENTS.md` → `~/.claude/CLAUDE.md`
    - Symlink all agent definitions to `~/.claude/agents/`
    - Symlink all commands to `~/.claude/commands/`
-   - Symlink all guidelines to `~/.claude/guidelines/`
+     - Symlink all guidelines to `~/.claude/guidelines/`
 
 3. **Verify setup:**
    ```bash

@@ -67,7 +67,6 @@ Core workflow guidance for AI agents working on software development projects.
 ### Commit Practices
 - **Small, focused commits**: Break work into logical, incremental commits rather than large, monolithic ones
 - **Meaningful commit messages**: Write clear, descriptive messages that explain what and why
-- **Avoid commit prefixes**: Do not use prefixes like "feat:", "fix:", "bug:" in commit messages
 
 ### Pre-commit Requirements
 1. Run configured linter (RuboCop, ESLint, etc.) and fix all issues
