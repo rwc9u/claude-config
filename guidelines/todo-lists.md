@@ -1,168 +1,72 @@
 # To-Do List Management Guidelines
 
 ## Overview
-Kelly uses dated to-do list files to track daily tasks and work items, plus an icebox list for items without a specific timeline. These files provide a persistent way to manage tasks across sessions and days.
 
-## File Naming Convention
-- **Daily Lists Pattern**: `todo-YYYY-MM-DD.md`
-- **Icebox List**: `icebox.md`
-- **Location**: `~/projects/kajabi/todo-lists/`
-- **Examples**: 
-  - `~/projects/kajabi/todo-lists/todo-2025-08-12.md`
-  - `~/projects/kajabi/todo-lists/todo-2025-08-15.md`
-  - `~/projects/kajabi/todo-lists/icebox.md`
+A single `TODO.md` file in the workspace root (`~/dev/TODO.md`) is used to track all tasks. This provides a simple, consolidated view of active work, backlog items, and completed task history.
 
-## When to Use To-Do Lists
-Automatically work with to-do list files when the user mentions:
-- "Show me my to-do list"
-- "Open today's to-do list"
-- "Create a to-do list for tomorrow"
-- "What's on my to-do list for [date]"
-- "Add this to my to-do list"
-- "Update my to-do list"
-- "Check off items on my to-do list"
-- Any language around managing, viewing, or working with dated to-do lists
-
-## When to Use the Icebox List
-The icebox list is for items without a specific timeline. Use it when the user mentions:
-- "Add this to the icebox"
-- "Put this in the icebox"
-- "Move this to icebox"
-- "What's in my icebox?"
-- "Show me the icebox list"
-- "I'll get to this eventually" (suggest adding to icebox)
-- "Not sure when I'll do this" (suggest adding to icebox)
-- "Save this for later" (suggest adding to icebox)
-- "Move this out of today/tomorrow" (without new date, suggest icebox)
-- "Pull this from the icebox"
-- "Move from icebox to today/tomorrow"
-
-## Icebox List Purpose
-The icebox list (`~/projects/kajabi/todo-lists/icebox.md`) serves as:
-- **Long-term storage** for tasks without immediate deadlines
-- **Idea capture** for things to remember but not schedule yet
-- **Backlog alternative** for personal items (vs project backlog tasks)
-- **Parking lot** for deprioritized items from daily lists
-- **Reference list** for "someday/maybe" tasks
+## File Location
+- **Single file**: `~/dev/TODO.md`
+- Do NOT create separate daily files or split into multiple files
 
 ## File Structure
 
-### Daily To-Do Lists
+The TODO list has three sections, in this order:
+
+1. **Today** - Active tasks for today or currently in progress
+2. **Backlog** - Tasks to be done later (not urgent)
+3. **Complete** - Completed tasks organized by date (newest first)
+
+### Template
 ```markdown
-# To-Do List for [Month Day, Year]
+# TODO
 
-## Tasks
+## Today
 
-### 1. [Task Title]
-- **Details**: [Any relevant details, PR numbers, links, etc.]
-- **Action**: [Specific action needed]
-- **Status**: [ ] (unchecked) or [x] (completed)
+- [ ] Active task 1
+- [ ] Active task 2
 
-### 2. [Task Title]
-- **Details**: [Any relevant details]
-- **Action**: [Specific action needed]
-- **Status**: [ ]
+## Backlog
 
-## Notes
-- Created: [Creation date]
-- [Any additional notes or context]
+- [ ] Future task 1
+- [ ] Future task 2
+
+## Complete
+
+### YYYY-MM-DD
+- [x] Completed task 1
+- [x] Completed task 2
 ```
 
-### Icebox List Structure
-```markdown
-# Icebox List
+## Task Format
 
-## Items
+Tasks use simple checkbox markdown:
+- `- [ ]` for incomplete tasks
+- `- [x]` for completed tasks
+- Include relevant links (PRs, Linear tickets, docs) inline with the task
 
-### [Task Title]
-- **Added**: [Date added to icebox]
-- **Details**: [Any relevant context]
-- **Action**: [What needs to be done]
+## Task Management Rules
 
-### [Task Title]
-- **Added**: [Date added to icebox]
-- **Details**: [Any relevant context]
-- **Action**: [What needs to be done]
-
-## Notes
-- Last reviewed: [Date]
-- Total items: [Count]
-```
+1. **Active Tasks**: Keep tasks that need to be done today or are currently in progress in the "Today" section
+2. **Completing Tasks**: When a task is marked complete, move it from "Today" to the "Complete" section under the current date (format: `### YYYY-MM-DD`)
+3. **Backlog**: Use this section for tasks that are not urgent but should be tracked
+4. **Do NOT use "This Week" category**: Remove or avoid creating a "This Week" section
+5. **Preserve history**: Never delete completed items from the Complete section
 
 ## Common Operations
 
-### Finding To-Do Lists
-```bash
-# List all to-do files
-ls ~/projects/kajabi/todo-lists/todo-*.md
+### When user says "show my to-do list"
+- Read `~/dev/TODO.md` and display it
 
-# Find today's to-do
-ls ~/projects/kajabi/todo-lists/todo-$(date +"%Y-%m-%d").md
+### When user says "add to my to-do list"
+- Add the item to the "Today" section (unless they say backlog)
 
-# Find tomorrow's to-do
-ls ~/projects/kajabi/todo-lists/todo-$(date -v +1d +"%Y-%m-%d").md
+### When user says "mark X as done" or "check off X"
+- Change `- [ ]` to `- [x]`
+- Move the item from "Today" to "Complete" under today's date heading
+- Create the date heading (`### YYYY-MM-DD`) if it doesn't exist yet
 
-# Find to-do for specific date
-ls ~/projects/kajabi/todo-lists/todo-2025-08-12.md
-```
+### When user says "move X to backlog"
+- Move the item from "Today" to the "Backlog" section
 
-### Reading To-Do Lists
-- Always use the Read tool to display the current contents
-- If no date is specified, assume "today"
-- If file doesn't exist for requested date, inform the user
-
-### Creating To-Do Lists
-- Use Write tool with the standard file structure
-- Include creation date in Notes section
-- Format dates as "August 12, 2025" in the title
-
-### Updating To-Do Lists
-- Use Edit tool to mark items complete with [x]
-- Add new items maintaining the numbered structure
-- Preserve existing content when adding new items
-- **DO NOT ask for permission** - directly update to-do lists when requested (Update tool is allowed)
-
-### Managing the Icebox
-- **Adding items**: Append new items with today's date in "Added" field
-- **Moving to icebox**: Copy item from daily list, add to icebox, remove from daily list
-- **Moving from icebox**: Copy item to target daily list, remove from icebox
-- **Reviewing**: Update "Last reviewed" date when showing icebox contents
-- **Count maintenance**: Update total count when adding/removing items
-
-## Best Practices
-1. **Always check if file exists** before trying to read
-2. **Use consistent formatting** to maintain readability
-3. **Include relevant links** (PRs, Linear tickets, etc.) in task details
-4. **Date stamp creation** in the Notes section
-5. **Preserve task history** - don't delete completed items, mark them with [x]
-
-## Examples of User Requests
-
-### Daily Lists
-**User**: "What's on my to-do list?"
-**Action**: Read `~/projects/kajabi/todo-lists/todo-[today's-date].md`
-
-**User**: "Add fixing PR comments to tomorrow's to-do"
-**Action**: Edit or create `~/projects/kajabi/todo-lists/todo-[tomorrow's-date].md`
-
-**User**: "Check off the first item on today's list"
-**Action**: Edit today's file, change `[ ]` to `[x]` for item 1
-
-**User**: "Show me Monday's to-do list"
-**Action**: Calculate Monday's date, read that file
-
-### Icebox Operations
-**User**: "Move item 3 to the icebox"
-**Action**: Copy item 3 from today's list to icebox.md, remove from today
-
-**User**: "Add 'research new framework' to icebox"
-**Action**: Append new item to icebox.md with today's date
-
-**User**: "What's in my icebox?"
-**Action**: Read icebox.md, report count in summary
-
-**User**: "Pull 'update documentation' from icebox to tomorrow"
-**Action**: Copy item from icebox.md to tomorrow's list, remove from icebox
-
-**User**: "I'll deal with this later"
-**Action**: Suggest: "Would you like me to add this to your icebox list?"
+### When user says "move X to today"
+- Move the item from "Backlog" to the "Today" section
