@@ -51,6 +51,10 @@ $RECYCLE.BIN/
 *.sublime-workspace
 *.sublime-project
 
+# Emacs
+\#*\#
+.\#*
+
 # Environment variables
 .env
 .env.local
