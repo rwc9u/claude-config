@@ -77,6 +77,9 @@ lerna-debug.log*
 # Git worktrees
 .worktrees/
 
+# Private/sensitive files
+teammates.md
+
 # Task files (generated)
 tasks/brainstorm-*.md
 tasks/prd-*.md

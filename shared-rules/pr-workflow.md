@@ -6,7 +6,7 @@
 - Follow the structure: Linear Ticket, Description, Solution, Customer Impact, QA Testing Guidelines
 - **Skip the Checklist section** - do not include it in PR descriptions
 - Fill out all relevant sections with meaningful content
-- **Linear Ticket Format**: Always format as markdown link: `[COOL-123](https://linear.app/kajabi/issue/COOL-123/issue-title)`
+- **Linear Ticket Format**: Always format as markdown link: `[PE-123](https://linear.app/kajabi/issue/PE-123/issue-title)`
 
 ## PR Updates and Edits
 - **ALWAYS pull latest PR description** before making any edits using `gh pr view <number>`
@@ -19,7 +19,7 @@
   - **PRs based off `main`**: Create as ready for review (not draft)
   - **PRs based off other branches or stacked PRs**: Create as draft
   - **Override**: Can explicitly request draft or ready status regardless of base branch
-- **Always assign to kellyredding** unless explicitly stated otherwise
+- **Always assign to rwc9u** unless explicitly stated otherwise
 - **Always add `knowpro` and `Dev QA` labels** unless explicitly stated not to
 - Add any additional labels explicitly requested alongside `knowpro` and `Dev QA`
 - **CI Label (`run-ci`) Rules**:
@@ -52,43 +52,9 @@
 
 ## Code Rabbit Reviews
 - **Use custom review prompt** from `~/dev/agent-config/shared-rules/coderabbit.md` to reduce noise while preserving valuable feedback
-- **When user asks** "have Code Rabbit review this" or similar, refer to `~/projects/kajabi/agent-shared-rules/coderabbit.md` for the full custom prompt
+- **When user asks** "have Code Rabbit review this" or similar, refer to `~/dev/agent-config/agent-shared-rules/coderabbit.md` for the full custom prompt
 - **See `~/dev/agent-config/shared-rules/coderabbit.md`** for the complete custom review prompt and additional commands
 
 ## Teammate GitHub Username Reference
 
-### Primary Reviewers - Knowledge Products Team
-When assigning PRs or referencing teammates, use these GitHub usernames:
-- **Andrew Dally**: `andrewdally` (Andrew, Dally)
-- **Andrew McIntee**: `AndrwM` (Andrew M, McIntee)
-- **Audrey Sperry**: `audreysperry` (Audrey, Sperry)
-- **Jamie Wagner**: `nobodyiscertain` (Jamie, Wagner)
-- **Joe Pickert**: `PickertJoe` (Joe, Pickert)
-- **Julia Bazhukhina**: `JulaB` (Julia, Bazhukhina)
-- **Kelly Redding**: `kellyredding` (Kelly, Redding)
-- **Michelle Child**: `michellechild` (Michelle, Child)
-- **Quinten Jason**: `QuintonJason` (Quinten, Quentin, Jason)
-- **Steve Hull**: `sdhull` (Steve, Hull)
-
-### Secondary Reviewers - Other Teams
-
-#### Commerce Team
-- **Angel Mendoza**: `admendoz25` (Angel, Mendoza)
-- **Andrew Perez**: `aperez-kajabi` (Andrew P, Perez)
-- **Collin Redding**: `jcredding` (Collin, Colin, Redding)
-- **Daniel Moreto**: `kajabi-daniel` (Daniel, Moreto)
-- **Darryl McCool**: `darryl-mccool` (Darryl, McCool)
-- **Devin Uhrich**: `duhrich` (Devin, Uhrich)
-- **Kevin Compton**: `klcompt` (Kevin, Compton)
-- **Kevin Zeillmann**: `KZeillmann` (Kevin Z, Zeillmann)
-- **Matt McGee**: `m-mcgee` (Matt, McGee)
-
-#### Mobile Team
-- **John Calvin**: `jdcalvin` (John, Calvin)
-- **Patrick MacDowell**: `PGMacDesign2` (Patrick, MacDowell)
-
-#### Production Engineering Team
-- **Katie Borisov**: `ktsalz` (Katie, Borisov)
-- **Ken Grimm**: `kenmgrimm` (Ken, Kenn, Grimm)
-- **Paul Simpson**: `prsimp` (Paul, Simpson)
-- **Rob Christie**: `rwc9u` (Rob, Christie)
+See `teammates.md` in the project root for the full list of teammate names and GitHub usernames.
