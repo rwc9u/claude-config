@@ -16,14 +16,11 @@
 
 ## PR Creation Defaults
 - **PR Status Based on Branch**:
-  - **PRs based off `main`**: Create as ready for review (not draft)
   - **PRs based off other branches or stacked PRs**: Create as draft
   - **Override**: Can explicitly request draft or ready status regardless of base branch
 - **Always assign to rwc9u** unless explicitly stated otherwise
-- **Always add `knowpro` and `Dev QA` labels** unless explicitly stated not to
-- Add any additional labels explicitly requested alongside `knowpro` and `Dev QA`
 - **CI Label (`run-ci`) Rules**:
-  - **Automatically add** `run-ci` label when PR is based off `main` branch
+  - **Prompt** whether `run-ci` label should be added
   - **Do NOT add** `run-ci` label when PR is based off any other branch or stacked on another PR
   - **Override**: Can still explicitly request to add/remove `run-ci` label regardless of base branch
   - Examples of explicit requests: "run CI", "trigger CI", "add CI", "test with CI"

@@ -3,15 +3,15 @@
 ## Kajabi Products Theme ZIP Generation Rules
 
 ### Theme ZIP Commands
-When generating theme ZIP files in the kajabi-products project, use these specific rake commands based on theme type (always prefix with `rb @ &&` to ensure correct Ruby version):
+When generating theme ZIP files in the kajabi-products project, use these specific rake commands based on theme type:
 
-- **Premier Product theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/projects/kajabi/theme-premier-product ./bin/rails theme:generate_product_theme_zip`
-- **Momentum Product theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/projects/kajabi/theme-momentum-product ./bin/rails theme:generate_product_theme_zip`
-- **Offer checkout page theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_OFFER_CHECKOUT_PAGE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_offer_checkout_page_theme_zip`
-- **Landing page theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_LANDING_PAGE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_landing_page_theme_zip`
-- **Site theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_SITE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_site_theme_zip`
-- **One-on-one coaching theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_one_on_one_coaching_theme_zip`
-- **Group coaching theme**: `rb @ && ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_group_coaching_theme_zip`
+- **Premier Product theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/projects/kajabi/theme-premier-product ./bin/rails theme:generate_product_theme_zip`
+- **Momentum Product theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/projects/kajabi/theme-momentum-product ./bin/rails theme:generate_product_theme_zip`
+- **Offer checkout page theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_OFFER_CHECKOUT_PAGE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_offer_checkout_page_theme_zip`
+- **Landing page theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_LANDING_PAGE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_landing_page_theme_zip`
+- **Site theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_SITE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_site_theme_zip`
+- **One-on-one coaching theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_one_on_one_coaching_theme_zip`
+- **Group coaching theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_group_coaching_theme_zip`
 
 ### Theme Reference Keywords
 - **"Premier Product"** → Premier Product theme command
@@ -31,20 +31,9 @@ When generating theme ZIP files in the kajabi-products project, use these specif
 - **This ensures**: Git updates, dependency updates, database migrations, and proper cleanup are all handled correctly
 - **Applies to all agents**: Any swarm agent or Claude Code working in the Kajabi products repo must follow this rule
 
-## Ruby Version Management Rules
+## Ruby Version Management
 
-### Auto-Switch Ruby Version
-- **Always check for `.ruby-version` file** before running Ruby commands
-- **If `.ruby-version` exists**: Use compound command `rb @ && [ruby-command]`
-- **Ruby commands include**: `bundle`, `rails`, `rake`, `rspec`, `ruby`, `gem`, or any command that executes Ruby code
-- **Never run Ruby commands** without ensuring correct Ruby version is active
-- **No permission required**: Always run `rb @` compound commands automatically without asking
-
-### Ruby Version Check Pattern
-1. Check if current directory has `.ruby-version` file
-2. If yes, automatically use compound command: `rb @ && [intended-ruby-command]`
-3. This ensures Ruby version is switched and command runs in same shell session
-4. Run immediately without requesting permission
+Ruby versions are managed by **asdf** via `.tool-versions` files in each project. asdf automatically selects the correct Ruby version when you're in a project directory - no manual version switching is needed.
 
 ## Database Migration Rules
 
@@ -64,37 +53,31 @@ When generating theme ZIP files in the kajabi-products project, use these specif
 - **TEST DATABASE ONLY**: Database reset/reseed operations are ONLY allowed with `RAILS_ENV=test`
 - **IF ASKED TO RESET**: Always refuse and explain that development database must be preserved
 
-### Running Database Migrations
-- **CRITICAL**: Always prefix Rails database migration commands with `rb @ && chpg @ &&`
-- **This ensures**: Correct Ruby version and PostgreSQL database are selected before running migrations
-- **Never run migration commands** without both `rb @` and `chpg @` prefixes
-- **Applies to all migration tasks**: migrate, rollback, status, etc.
-
 ### Common Migration Command Examples
 ```bash
 # Run pending migrations
-rb @ && chpg @ && rake db:migrate
+rake db:migrate
 
 # Run post-release migrations
-rb @ && chpg @ && rake db:post_release_migrate
+rake db:post_release_migrate
 
 # Check migration status
-rb @ && chpg @ && rake db:migrate:status
+rake db:migrate:status
 
 # Rollback last migration
-rb @ && chpg @ && rake db:rollback
+rake db:rollback
 
 # Rollback specific number of migrations
-rb @ && chpg @ && rake db:rollback STEP=3
+rake db:rollback STEP=3
 
 # Migrate test database when out of sync
-rb @ && chpg @ && RAILS_ENV=test rake db:migrate
+RAILS_ENV=test rake db:migrate
 
 # Reset and reseed test database
-rb @ && chpg @ && RAILS_ENV=test rake db:reset
+RAILS_ENV=test rake db:reset
 
 # Run specific migration version
-rb @ && chpg @ && rake db:migrate VERSION=20250425160000
+rake db:migrate VERSION=20250425160000
 ```
 
 ### Post-Release Migrations
@@ -113,4 +96,4 @@ rb @ && chpg @ && rake db:migrate VERSION=20250425160000
 1. Check latest migrations: `ls -la db/post_release_migrate/ | tail -10`
 2. Pick a timestamp that's ~5 migrations back or a few months earlier
 3. Create migration in `db/post_release_migrate/` with that timestamp
-4. Run migration with proper prefixes: `rb @ && chpg @ && rake db:post_release_migrate`
+4. Run migration: `rake db:post_release_migrate`
