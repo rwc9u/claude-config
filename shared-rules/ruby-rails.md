@@ -1,3 +1,10 @@
+---
+paths:
+  - "**/*.{rb,rake,erb}"
+  - "Gemfile"
+  - "Rakefile"
+---
+
 # Ruby on Rails Guidelines
 
 Comprehensive conventions and style guidelines for Ruby on Rails development.

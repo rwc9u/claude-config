@@ -9,8 +9,16 @@ CLAUDE_HOME = Pathname.new(Dir.home) / '.claude'
 CLAUDE_MD_SOURCE = REPO_ROOT / 'AGENTS.md'
 CLAUDE_MD_TARGET = CLAUDE_HOME / 'CLAUDE.md'
 
-# Directories to symlink contents from
-DIRS_TO_LINK = %w[agents commands guidelines].freeze
+# Directories to symlink individual files from
+# Keys are source dirs in repo, values are target dirs under ~/.claude/
+DIRS_TO_LINK = {
+  'agents' => 'agents',
+  'commands' => 'commands',
+  'shared-rules' => 'rules/shared-rules'
+}.freeze
+
+# Directories to symlink subdirectories from (each child directory becomes a symlink)
+SUBDIRS_TO_LINK = %w[skills].freeze
 
 desc 'Set up Claude configuration by symlinking files to ~/.claude/'
 task :setup do
@@ -26,9 +34,14 @@ task :setup do
   # Symlink AGENTS.md -> ~/.claude/CLAUDE.md
   setup_main_config
 
-  # Symlink directory contents
-  DIRS_TO_LINK.each do |dir|
-    setup_directory_contents(dir)
+  # Symlink directory contents (individual files)
+  DIRS_TO_LINK.each do |source_dir, target_dir|
+    setup_directory_contents(source_dir, target_dir)
+  end
+
+  # Symlink subdirectories (entire skill folders)
+  SUBDIRS_TO_LINK.each do |dir|
+    setup_directory_subdirs(dir)
   end
 
   puts
@@ -57,15 +70,15 @@ task :uninstall do
   end
 
   # Remove symlinks in each directory
-  DIRS_TO_LINK.each do |dir|
+  (DIRS_TO_LINK.values + SUBDIRS_TO_LINK).each do |dir|
     target_dir = CLAUDE_HOME / dir
     next unless target_dir.exist?
 
-    target_dir.children.each do |file|
-      next unless file.symlink? && points_to_repo?(file)
+    target_dir.children.each do |entry|
+      next unless entry.symlink? && points_to_repo?(entry)
 
-      file.delete
-      puts "✓ Removed #{file}"
+      entry.delete
+      puts "✓ Removed #{entry}"
       removed_count += 1
     end
   end
@@ -96,9 +109,9 @@ def setup_main_config
   end
 end
 
-def setup_directory_contents(dir_name)
+def setup_directory_contents(dir_name, target_name = dir_name)
   source_dir = REPO_ROOT / dir_name
-  target_dir = CLAUDE_HOME / dir_name
+  target_dir = CLAUDE_HOME / target_name
 
   unless source_dir.exist?
     puts "⚠ Warning: Source directory #{source_dir} not found, skipping..."
@@ -123,6 +136,37 @@ def setup_directory_contents(dir_name)
       end
     else
       create_symlink(source_file, target_file)
+    end
+  end
+end
+
+def setup_directory_subdirs(dir_name)
+  source_dir = REPO_ROOT / dir_name
+  target_dir = CLAUDE_HOME / dir_name
+
+  unless source_dir.exist?
+    puts "⚠ Warning: Source directory #{source_dir} not found, skipping..."
+    return
+  end
+
+  # Create target directory if it doesn't exist
+  FileUtils.mkdir_p(target_dir) unless target_dir.exist?
+
+  # Symlink each subdirectory
+  source_dir.children.select(&:directory?).each do |source_subdir|
+    target_subdir = target_dir / source_subdir.basename
+
+    if target_subdir.exist? && !target_subdir.symlink?
+      puts "⚠ Skipped #{target_subdir} (directory already exists, not a symlink)"
+    elsif target_subdir.symlink?
+      if should_overwrite?(target_subdir)
+        target_subdir.delete
+        create_symlink(source_subdir, target_subdir)
+      else
+        puts "⊘ Skipped #{target_subdir} (already exists)"
+      end
+    else
+      create_symlink(source_subdir, target_subdir)
     end
   end
 end

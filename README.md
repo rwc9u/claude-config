@@ -32,7 +32,7 @@ claude-config/
 │   ├── smart-commit.md           # Intelligent commit creation
 │   ├── create-pr.md              # Draft PR creation
 │   └── update-docs.md            # Documentation sync from git history
-└── guidelines/                    # Language-specific development guidelines
+└── shared-rules/                    # Language-specific development guidelines
     ├── git-workflow.md           # Branch naming, commits, PRs, rebasing
     ├── ruby-rails.md             # Rails conventions and best practices
     ├── javascript.md             # JS/TS, React, Hotwire/Stimulus guidelines
@@ -54,7 +54,7 @@ rake setup
 # This will:
 # - Create ~/.claude/ directory if needed
 # - Symlink AGENTS.md to ~/.claude/CLAUDE.md
-# - Symlink all files in agents/, commands/, and guidelines/ to ~/.claude/
+# - Symlink all files in agents/, commands/, and shared-rules/ to ~/.claude/
 
 # To remove symlinks later:
 rake uninstall
@@ -80,7 +80,7 @@ cp <path-to-claude-config>/AGENTS.md /path/to/project/
 1. **Read [AGENTS.md](AGENTS.md) first** - Contains core workflow instructions and philosophy
 2. **Check [CLAUDE.md](CLAUDE.md)** - Repository-specific architecture and conventions
 3. **Reference the Workflows section below** - Complete workflow decision trees and examples
-4. **Use language-specific guidelines** in `guidelines/` as needed
+4. **Use language-specific guidelines** in `shared-rules/` as needed
 
 ## Installation
 
@@ -106,7 +106,7 @@ cp <path-to-claude-config>/AGENTS.md /path/to/project/
    - Symlink `AGENTS.md` → `~/.claude/CLAUDE.md`
    - Symlink all agent definitions to `~/.claude/agents/`
    - Symlink all commands to `~/.claude/commands/`
-     - Symlink all guidelines to `~/.claude/guidelines/`
+     - Symlink all shared-rules to `~/.claude/shared-rules/`
 
 3. **Verify setup:**
    ```bash
@@ -259,7 +259,7 @@ Analyzes all changes and creates focused, logical commits:
 
 ## Guidelines Overview
 
-### Ruby on Rails ([guidelines/ruby-rails.md](guidelines/ruby-rails.md))
+### Ruby on Rails ([shared-rules/ruby-rails.md](shared-rules/ruby-rails.md))
 
 Comprehensive Rails conventions covering:
 - Code structure (controllers, models, services, concerns)
@@ -270,7 +270,7 @@ Comprehensive Rails conventions covering:
 - Performance optimization
 - Code style with RuboCop
 
-### JavaScript ([guidelines/javascript.md](guidelines/javascript.md))
+### JavaScript ([shared-rules/javascript.md](shared-rules/javascript.md))
 
 JavaScript best practices including:
 - Framework detection (React, Vue, Hotwire/Stimulus)
@@ -281,7 +281,7 @@ JavaScript best practices including:
 - Security (XSS prevention, CSRF tokens)
 - Performance optimization
 
-### Testing ([guidelines/testing.md](guidelines/testing.md))
+### Testing ([shared-rules/testing.md](shared-rules/testing.md))
 
 Complete testing guide with:
 - Test categories (unit, integration, system/feature)
@@ -293,7 +293,7 @@ Complete testing guide with:
 - Mocking and stubbing strategies
 - Performance optimization for test suites
 
-### Git Workflow ([guidelines/git-workflow.md](guidelines/git-workflow.md))
+### Git Workflow ([shared-rules/git-workflow.md](shared-rules/git-workflow.md))
 
 Git best practices covering:
 - Branch management and naming conventions
@@ -323,10 +323,10 @@ Add to `~/.claude/CLAUDE.md`:
 For all projects, follow the guidelines in <path-to-claude-config>/AGENTS.md
 
 When working on specific technologies, reference:
-- Ruby/Rails: <path-to-claude-config>/guidelines/ruby-rails.md
-- JavaScript: <path-to-claude-config>/guidelines/javascript.md
-- Testing: <path-to-claude-config>/guidelines/testing.md
-- Git workflow: <path-to-claude-config>/guidelines/git-workflow.md
+- Ruby/Rails: <path-to-claude-config>/shared-rules/ruby-rails.md
+- JavaScript: <path-to-claude-config>/shared-rules/javascript.md
+- Testing: <path-to-claude-config>/shared-rules/testing.md
+- Git workflow: <path-to-claude-config>/shared-rules/git-workflow.md
 ```
 
 ### Project-Specific Setup
@@ -357,7 +357,7 @@ cp <path-to-claude-config>/agents/* /path/to/project/.claude/agents/
 
 Fork this repository and customize:
 
-1. **Modify guidelines** - Update language-specific conventions in `guidelines/`
+1. **Modify guidelines** - Update language-specific conventions in `shared-rules/`
 2. **Add new commands** - Create custom slash commands in `commands/`
 3. **Adjust workflows** - Update `commands/WORKFLOW.md` for your process
 4. **Extend agent roles** - Add specialized agents in `agents/`
@@ -412,7 +412,7 @@ Execute the test command appropriate for this project and explain any failures.
 
 ### Adding New Guidelines
 
-Create a new `.md` file in `guidelines/`:
+Create a new `.md` file in `shared-rules/`:
 
 ```markdown
 # Language/Framework Name Guidelines

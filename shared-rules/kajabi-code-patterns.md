@@ -1,3 +1,8 @@
+---
+paths:
+  - "**/*.rb"
+---
+
 # Kajabi Code Patterns
 
 This file contains Kajabi-specific coding patterns and conventions used throughout the codebase. These patterns apply to interactions, jobs, models, and their corresponding specs.

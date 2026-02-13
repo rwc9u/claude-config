@@ -51,9 +51,9 @@
 - See `gh.md` for complete GitHub CLI usage guidelines
 
 ## Code Rabbit Reviews
-- **Use custom review prompt** from `~/dev/agent-config/guidelines/coderabbit.md` to reduce noise while preserving valuable feedback
-- **When user asks** "have Code Rabbit review this" or similar, refer to `~/projects/kajabi/agent-guidelines/coderabbit.md` for the full custom prompt
-- **See `~/dev/agent-config/guidelines/coderabbit.md`** for the complete custom review prompt and additional commands
+- **Use custom review prompt** from `~/dev/agent-config/shared-rules/coderabbit.md` to reduce noise while preserving valuable feedback
+- **When user asks** "have Code Rabbit review this" or similar, refer to `~/projects/kajabi/agent-shared-rules/coderabbit.md` for the full custom prompt
+- **See `~/dev/agent-config/shared-rules/coderabbit.md`** for the complete custom review prompt and additional commands
 
 ## Teammate GitHub Username Reference
 

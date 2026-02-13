@@ -1,3 +1,10 @@
+---
+paths:
+  - "**/*.{rb,rake,erb}"
+  - "Gemfile"
+  - "Rakefile"
+---
+
 # Ruby Code Style Guidelines
 
 ## String Literals

@@ -1,3 +1,8 @@
+---
+paths:
+  - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
+---
+
 # JavaScript Guidelines
 
 Comprehensive conventions and style guidelines for JavaScript development.

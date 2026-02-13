@@ -1,3 +1,9 @@
+---
+paths:
+  - "**/*_spec.rb"
+  - "spec/**/*.rb"
+---
+
 # RSpec Testing Guidelines
 
 ## RSpec Structure Rules

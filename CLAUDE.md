@@ -32,7 +32,7 @@ claude-config/
 │   ├── smart-commit.md           # Intelligent commit creation
 │   ├── create-pr.md              # Draft PR creation
 │   └── update-docs.md            # Documentation sync from git history
-└── guidelines/                    # Language-specific development guidelines
+└── shared-rules/                    # Language-specific development guidelines
     ├── git-workflow.md           # Branch naming, commits, PRs
     ├── ruby-rails.md             # Rails conventions and best practices
     ├── javascript.md             # JS/TS guidelines, React, Hotwire
@@ -46,7 +46,7 @@ This repository does not have traditional "build" or "test" commands since it co
 ### Working with This Repository
 
 **To modify agent configurations:**
-1. Edit relevant `.md` files in `agents/`, `commands/`, or `guidelines/`
+1. Edit relevant `.md` files in `agents/`, `commands/`, or `shared-rules/`
 2. Test changes by using the commands/agents in actual projects
 3. Commit changes following git-workflow guidelines
 
@@ -64,7 +64,7 @@ This repository does not have traditional "build" or "test" commands since it co
 5. Test the command in a real project
 
 **To add a new guideline:**
-1. Create a new `.md` file in `guidelines/` directory
+1. Create a new `.md` file in `shared-rules/` directory
 2. Document language/framework-specific conventions
 3. Update `AGENTS.md` to reference the new guideline
 4. Include examples and anti-patterns
@@ -182,10 +182,10 @@ Add to `~/.claude/CLAUDE.md`:
 For all projects, follow the guidelines in <path-to-claude-config>/AGENTS.md
 
 When working on specific technologies, reference:
-- Ruby/Rails: <path-to-claude-config>/guidelines/ruby-rails.md
-- JavaScript: <path-to-claude-config>/guidelines/javascript.md
-- Testing: <path-to-claude-config>/guidelines/testing.md
-- Git workflow: <path-to-claude-config>/guidelines/git-workflow.md
+- Ruby/Rails: <path-to-claude-config>/shared-rules/ruby-rails.md
+- JavaScript: <path-to-claude-config>/shared-rules/javascript.md
+- Testing: <path-to-claude-config>/shared-rules/testing.md
+- Git workflow: <path-to-claude-config>/shared-rules/git-workflow.md
 ```
 
 ### Project-Specific Setup
@@ -305,7 +305,7 @@ This repository embodies several key principles:
 - Update `commands/task-orchestrator.md` if interface changes
 
 **When updating guidelines:**
-- Edit relevant file in `guidelines/`
+- Edit relevant file in `shared-rules/`
 - Ensure `AGENTS.md` references are up to date
 - Test by using guidelines in real projects
 

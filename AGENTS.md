@@ -72,7 +72,7 @@ Core workflow guidance for AI agents working on software development projects.
 1. Run configured linter (RuboCop, ESLint, etc.) and fix all issues
 2. Verify all tests pass
 
-See [guidelines/git-workflow.md](guidelines/git-workflow.md) for detailed git practices.
+See [shared-rules/git-workflow.md](shared-rules/git-workflow.md) for detailed git practices.
 
 ---
 
@@ -84,7 +84,7 @@ See [guidelines/git-workflow.md](guidelines/git-workflow.md) for detailed git pr
 - Always write tests (RSpec) with FactoryBot
 - Check Gemfile before adding new dependencies
 
-See [guidelines/ruby-rails.md](guidelines/ruby-rails.md) for detailed Rails conventions.
+See [shared-rules/ruby-rails.md](shared-rules/ruby-rails.md) for detailed Rails conventions.
 
 ### JavaScript
 - Check package.json to understand the stack (React, Vue, vanilla JS, etc.)
@@ -92,7 +92,7 @@ See [guidelines/ruby-rails.md](guidelines/ruby-rails.md) for detailed Rails conv
 - For Rails apps, prefer Hotwire/Stimulus over heavy JS frameworks
 - Avoid TypeScript unless project already uses it
 
-See [guidelines/javascript.md](guidelines/javascript.md) for detailed JavaScript conventions.
+See [shared-rules/javascript.md](shared-rules/javascript.md) for detailed JavaScript conventions.
 
 ### Testing
 - Write tests for all new features and bug fixes
@@ -101,7 +101,7 @@ See [guidelines/javascript.md](guidelines/javascript.md) for detailed JavaScript
 - Mock only external APIs, payment processors, email services
 - Keep tests simple - focus on happy path for system/feature tests
 
-See [guidelines/testing.md](guidelines/testing.md) for comprehensive testing guidance.
+See [shared-rules/testing.md](shared-rules/testing.md) for comprehensive testing guidance.
 
 ---
 
@@ -219,4 +219,4 @@ Before completing any code change:
 
 ---
 
-For detailed language-specific guidelines, see the [guidelines/](guidelines/) directory.
+For detailed language-specific guidelines, see the [shared-rules/](shared-rules/) directory.
