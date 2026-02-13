@@ -32,7 +32,7 @@ claude-config/
 │   ├── smart-commit.md           # Intelligent commit creation
 │   ├── create-pr.md              # Draft PR creation
 │   └── update-docs.md            # Documentation sync from git history
-└── shared-rules/                    # Language-specific development guidelines
+└── shared-rules/                 # Language-specific and process specific development guidelines
     ├── git-workflow.md           # Branch naming, commits, PRs, rebasing
     ├── ruby-rails.md             # Rails conventions and best practices
     ├── javascript.md             # JS/TS, React, Hotwire/Stimulus guidelines
