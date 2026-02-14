@@ -13,12 +13,17 @@ CLAUDE_MD_TARGET = CLAUDE_HOME / 'CLAUDE.md'
 # Keys are source dirs in repo, values are target dirs under ~/.claude/
 DIRS_TO_LINK = {
   'agents' => 'agents',
-  'commands' => 'commands',
-  'shared-rules' => 'rules/shared-rules'
+  'commands' => 'commands'
 }.freeze
 
 # Directories to symlink subdirectories from (each child directory becomes a symlink)
 SUBDIRS_TO_LINK = %w[skills].freeze
+
+# Directories to symlink as a whole directory
+# Keys are source dirs in repo, values are target paths under ~/.claude/
+DIR_SYMLINKS = {
+  'shared-rules' => 'rules/shared-rules'
+}.freeze
 
 desc 'Set up Claude configuration by symlinking files to ~/.claude/'
 task :setup do
@@ -42,6 +47,11 @@ task :setup do
   # Symlink subdirectories (entire skill folders)
   SUBDIRS_TO_LINK.each do |dir|
     setup_directory_subdirs(dir)
+  end
+
+  # Symlink entire directories
+  DIR_SYMLINKS.each do |source_dir, target_path|
+    setup_dir_symlink(source_dir, target_path)
   end
 
   puts
@@ -80,6 +90,18 @@ task :uninstall do
       entry.delete
       puts "✓ Removed #{entry}"
       removed_count += 1
+    end
+  end
+
+  # Remove directory symlinks
+  DIR_SYMLINKS.each_value do |target_path|
+    target = CLAUDE_HOME / target_path
+    if target.symlink? && points_to_repo?(target)
+      target.delete
+      puts "✓ Removed #{target}"
+      removed_count += 1
+    elsif target.symlink?
+      puts "⊘ Skipped #{target} (points to different location)"
     end
   end
 
@@ -168,6 +190,33 @@ def setup_directory_subdirs(dir_name)
     else
       create_symlink(source_subdir, target_subdir)
     end
+  end
+end
+
+def setup_dir_symlink(dir_name, target_path)
+  source_dir = REPO_ROOT / dir_name
+  target = CLAUDE_HOME / target_path
+
+  unless source_dir.exist?
+    puts "⚠ Warning: Source directory #{source_dir} not found, skipping..."
+    return
+  end
+
+  # Create parent directory if it doesn't exist
+  FileUtils.mkdir_p(target.parent) unless target.parent.exist?
+
+  if target.exist? && !target.symlink?
+    puts "⚠ Skipped #{target} (already exists, not a symlink)"
+    puts "  To use the repository version, manually remove this directory."
+  elsif target.symlink?
+    if should_overwrite?(target)
+      target.delete
+      create_symlink(source_dir, target)
+    else
+      puts "⊘ Skipped #{target} (already exists)"
+    end
+  else
+    create_symlink(source_dir, target)
   end
 end
 
