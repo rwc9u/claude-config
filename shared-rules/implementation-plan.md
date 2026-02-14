@@ -15,7 +15,7 @@
 
 ### Sequence Number Determination Process
 **IMPORTANT**: Before saving any implementation plan, you MUST determine the correct sequence number by:
-1. **List all existing files** in the `~/projects/kajabi/implementation-plans/` directory using the `ls` command
+1. **List all existing files** in the `~/dev/notes/implementation-plans/` directory using the `ls` command
 2. **Filter files** that start with the current date prefix (YYYY-MM-DD format)
 3. **Extract sequence numbers** from matching files (the NN part after the underscore)
 4. **Determine next number**: If no files exist for the current date, use `01`. Otherwise, increment the highest found sequence number by 1
@@ -24,7 +24,7 @@
 **Example workflow**:
 ```bash
 # Step 1: List existing files
-ls ~/projects/kajabi/implementation-plans/
+ls ~/dev/notes/implementation-plans/
 
 # Step 2: If you see files like:
 # 2025-08-05_01_user-auth.md

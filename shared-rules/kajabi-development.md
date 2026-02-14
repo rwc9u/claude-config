@@ -5,13 +5,13 @@
 ### Theme ZIP Commands
 When generating theme ZIP files in the kajabi-products project, use these specific rake commands based on theme type:
 
-- **Premier Product theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/projects/kajabi/theme-premier-product ./bin/rails theme:generate_product_theme_zip`
-- **Momentum Product theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/projects/kajabi/theme-momentum-product ./bin/rails theme:generate_product_theme_zip`
-- **Offer checkout page theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_OFFER_CHECKOUT_PAGE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_offer_checkout_page_theme_zip`
-- **Landing page theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_LANDING_PAGE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_landing_page_theme_zip`
-- **Site theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_SITE_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_site_theme_zip`
-- **One-on-one coaching theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_one_on_one_coaching_theme_zip`
-- **Group coaching theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/projects/kajabi/theme-encore-site bundle exec rake theme:generate_group_coaching_theme_zip`
+- **Premier Product theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/dev/theme-premier-product ./bin/rails theme:generate_product_theme_zip`
+- **Momentum Product theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_PRODUCT_THEME_DIR=~/dev/theme-momentum-product ./bin/rails theme:generate_product_theme_zip`
+- **Offer checkout page theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_OFFER_CHECKOUT_PAGE_THEME_DIR=~/dev/theme-encore-site bundle exec rake theme:generate_offer_checkout_page_theme_zip`
+- **Landing page theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_LANDING_PAGE_THEME_DIR=~/dev/theme-encore-site bundle exec rake theme:generate_landing_page_theme_zip`
+- **Site theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_SITE_THEME_DIR=~/dev/theme-encore-site bundle exec rake theme:generate_site_theme_zip`
+- **One-on-one coaching theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/dev/theme-encore-site bundle exec rake theme:generate_one_on_one_coaching_theme_zip`
+- **Group coaching theme**: `ZIP_OUTPUT_PATH=~/Desktop DEV_COACHING_THEME_DIR=~/dev/theme-encore-site bundle exec rake theme:generate_group_coaching_theme_zip`
 
 ### Theme Reference Keywords
 - **"Premier Product"** → Premier Product theme command
