@@ -25,6 +25,8 @@ DIR_SYMLINKS = {
   'shared-rules' => 'rules/shared-rules'
 }.freeze
 
+task default: :setup
+
 desc 'Set up Claude configuration by symlinking files to ~/.claude/'
 task :setup do
   puts "Setting up Claude configuration from #{REPO_ROOT}..."
