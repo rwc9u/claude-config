@@ -79,6 +79,7 @@ lerna-debug.log*
 
 # Private/sensitive files
 teammates.md
+shared-rules/kajabi-*.md
 
 # Task files (generated)
 tasks/brainstorm-*.md
