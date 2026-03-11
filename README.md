@@ -21,7 +21,9 @@ claude-config/
 ├── .gitignore                     # Ignore OS files, editors, generated tasks
 ├── teammates.md                   # (gitignored) Teammate names & GitHub usernames
 ├── agents/                        # Specialized agent role definitions
+│   ├── devops-engineer.md        # DevOps, infrastructure, and CI/CD agent
 │   ├── implementer.md            # Task execution agent (no scope creep)
+│   ├── research-assistant.md     # Web research and project analysis agent
 │   └── review-architect.md       # Code review and quality assurance agent
 ├── commands/                      # Custom Claude Code slash commands
 │   ├── brainstorm.md             # Interactive idea refinement
@@ -32,13 +34,26 @@ claude-config/
 │   ├── process-task-list.md      # Manual task list workflow guidance
 │   ├── smart-commit.md           # Intelligent commit creation
 │   ├── create-pr.md              # Draft PR creation
+│   ├── pr-ready-for-review.md    # Mark PR ready for review
+│   ├── review-migration-pr.md    # Review migration PRs locally
+│   ├── list-components.md        # List installed Claude Code components
 │   └── update-docs.md            # Documentation sync from git history
-└── shared-rules/                 # Language-specific and process specific development guidelines
-    ├── git-workflow.md           # Branch naming, commits, PRs, rebasing
-    ├── ruby-rails.md             # Rails conventions and best practices
-    ├── rails-development.md      # Rails dev practices, DB safety, migration commands
+├── skills/                        # Claude Code skills
+│   └── list-components/          # Component inventory skill with discovery script
+└── shared-rules/                  # Language-specific and process-specific development guidelines
+    ├── coderabbit.md             # CodeRabbit review integration
+    ├── cursor.md                 # Cursor IDE integration
+    ├── devops.md                 # EKS environments and Kubernetes aliases
+    ├── emacs.md                  # Emacs integration via emacsclient
+    ├── gh.md                     # GitHub CLI usage and PR workflows
+    ├── git-workflow.md           # Branch naming, commits, conventional commits
+    ├── implementation-plan.md    # Implementation plan writing guidelines
     ├── javascript.md             # JS/TS, React, Hotwire/Stimulus guidelines
+    ├── pr-workflow.md            # Pull request creation and review workflows
+    ├── rails-development.md      # Rails dev practices, DB safety, migration commands
+    ├── ruby-rails.md             # Rails conventions and best practices
     ├── testing.md                # RSpec, Jest, FactoryBot, mocking strategies
+    ├── todo-lists.md             # TODO.md task management guidelines
     └── <company>-*.md            # (gitignored) Company-specific conventions
 ```
 
@@ -191,7 +206,7 @@ See the **Workflows** section below for complete workflow guide with decision tr
 
 ## Specialized Agents
 
-This repository includes specialized agent role definitions in the [`agents/`](agents/) directory. These agents are designed to work together in structured workflows.
+This repository includes specialized agent role definitions in the [`agents/`](agents/) directory. These agents serve different roles in development workflows.
 
 ### Implementer Agent ([agents/implementer.md](agents/implementer.md))
 
@@ -225,6 +240,39 @@ A quality assurance agent that provides critical oversight and code review.
 - Ensuring quality before merging
 - Catching edge cases and potential bugs
 - Working within a larger orchestrated workflow
+
+### Research Assistant Agent ([agents/research-assistant.md](agents/research-assistant.md))
+
+An expert research and personal assistant agent for information gathering and project analysis.
+
+**Key characteristics:**
+- Searches the web for information and synthesizes findings
+- Analyzes projects in the workspace (tech stack, structure, dependencies)
+- Provides workspace overviews across all projects
+- Cites sources and flags conflicting information
+
+**When to use:**
+- Web research or information gathering
+- Project overviews and codebase analysis
+- Comparing options or approaches
+- Summarizing documents or technical topics
+
+### DevOps Engineer Agent ([agents/devops-engineer.md](agents/devops-engineer.md))
+
+A senior DevOps engineer agent for infrastructure, automation, and deployment workflows.
+
+**Key characteristics:**
+- Infrastructure as Code (Terraform, Ansible, CloudFormation)
+- Container orchestration (Docker, Kubernetes, Helm)
+- CI/CD pipeline design and optimization
+- Monitoring, observability, and incident management
+- Security integration and compliance automation
+
+**When to use:**
+- Infrastructure automation and configuration
+- CI/CD pipeline setup or troubleshooting
+- Kubernetes and container management
+- Cloud platform operations (AWS, GCP, Azure)
 
 ## Custom Slash Commands
 
