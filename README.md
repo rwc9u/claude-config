@@ -5,7 +5,7 @@ A centralized collection of instructions, guidelines, and custom slash commands 
 ## Purpose
 
 This repository provides:
-- **AGENTS.md** - Core agent workflow and instructions following the [AGENTS.md standard](https://github.com/openai/agents.md)
+- **AGENTS.md** - Core workflow instructions and philosophy, symlinked as `~/.claude/CLAUDE.md` for global use. Follows the [AGENTS.md standard](https://github.com/openai/agents.md)
 - **Custom Slash Commands** - Complete workflow commands for Claude Code (brainstorming, requirements, task orchestration, git workflows)
 - **Specialized Agent Roles** - Focused implementer and review-architect agents for structured development
 - **Development Guidelines** - Language-specific conventions, testing practices, and git workflows
@@ -19,6 +19,7 @@ claude-config/
 ├── AGENTS.md                      # Core agent guidelines (use in project roots)
 ├── Rakefile                       # Automated setup/uninstall tasks
 ├── .gitignore                     # Ignore OS files, editors, generated tasks
+├── teammates.md                   # (gitignored) Teammate names & GitHub usernames
 ├── agents/                        # Specialized agent role definitions
 │   ├── implementer.md            # Task execution agent (no scope creep)
 │   └── review-architect.md       # Code review and quality assurance agent
@@ -35,9 +36,36 @@ claude-config/
 └── shared-rules/                 # Language-specific and process specific development guidelines
     ├── git-workflow.md           # Branch naming, commits, PRs, rebasing
     ├── ruby-rails.md             # Rails conventions and best practices
+    ├── rails-development.md      # Rails dev practices, DB safety, migration commands
     ├── javascript.md             # JS/TS, React, Hotwire/Stimulus guidelines
-    └── testing.md                # RSpec, Jest, FactoryBot, mocking strategies
+    ├── testing.md                # RSpec, Jest, FactoryBot, mocking strategies
+    └── <company>-*.md            # (gitignored) Company-specific conventions
 ```
+
+## Private / Company-Specific Files
+
+Some files in this repository are **gitignored** because they contain company-specific or team-specific information that doesn't belong in a public repo. These files live on disk locally and are still picked up by Claude Code when symlinked, but they are not committed to version control.
+
+### `teammates.md` (gitignored)
+
+A reference file that maps teammate names to their GitHub usernames, organized by team. This allows AI agents to correctly assign PR reviewers, mention teammates in issues, and interact with GitHub on your behalf without you having to remember exact usernames. Each entry includes the person's full name, GitHub username, and common name aliases for fuzzy matching (e.g., nicknames, shortened names).
+
+Example structure:
+```markdown
+### Your Team Name
+- **Full Name**: `github-username` (Alias1, Alias2)
+```
+
+### `shared-rules/<company>-*.md` (gitignored)
+
+Company-specific shared rules that contain proprietary conventions, internal tooling commands, or codebase-specific patterns. These follow the same format as the public shared rules but cover things like:
+
+- Internal CLI aliases and monorepo update workflows
+- Company-specific migration conventions (e.g., custom migration directories)
+- Framework patterns unique to your codebase (e.g., custom interaction/job base classes, internal DSLs)
+- Internal spec helper patterns and test conventions
+
+To add your own, create files matching `shared-rules/<company>-*.md` and add the corresponding gitignore pattern. They'll be symlinked alongside the public rules by `rake setup` and available to Claude Code in all projects.
 
 ## Quick Start
 
@@ -77,8 +105,8 @@ cp <path-to-claude-config>/AGENTS.md /path/to/project/
 
 ### For AI Agents Reading This
 
-1. **Read [AGENTS.md](AGENTS.md) first** - Contains core workflow instructions and philosophy
-2. **Check [CLAUDE.md](CLAUDE.md)** - Repository-specific architecture and conventions
+1. **Read [AGENTS.md](AGENTS.md) first** - Core workflow instructions and philosophy. This file is symlinked as `~/.claude/CLAUDE.md` to serve as the user's global Claude Code instructions across all projects.
+2. **Check [CLAUDE.md](CLAUDE.md)** - Repository-specific architecture and conventions for *this* repo, explaining how to configure and extend the claude-config repository itself.
 3. **Reference the Workflows section below** - Complete workflow decision trees and examples
 4. **Use language-specific guidelines** in `shared-rules/` as needed
 

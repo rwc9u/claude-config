@@ -32,12 +32,27 @@ claude-config/
 │   ├── smart-commit.md           # Intelligent commit creation
 │   ├── create-pr.md              # Draft PR creation
 │   └── update-docs.md            # Documentation sync from git history
+├── teammates.md                   # (gitignored) Teammate names & GitHub usernames
 └── shared-rules/                    # Language-specific development guidelines
     ├── git-workflow.md           # Branch naming, commits, PRs
     ├── ruby-rails.md             # Rails conventions and best practices
+    ├── rails-development.md      # Rails dev practices, DB safety, migration commands
     ├── javascript.md             # JS/TS guidelines, React, Hotwire
-    └── testing.md                # RSpec, Jest, FactoryBot, mocking
+    ├── testing.md                # RSpec, Jest, FactoryBot, mocking
+    └── <company>-*.md            # (gitignored) Company-specific conventions
 ```
+
+## Private / Company-Specific Files
+
+Some files are **gitignored** because they contain company-specific or team-specific information. These files live on disk locally and are still picked up by Claude Code when symlinked, but they are not committed to version control.
+
+### `teammates.md` (gitignored)
+
+A reference file that maps teammate names to their GitHub usernames, organized by team. This allows AI agents to correctly assign PR reviewers, mention teammates in issues, and interact with GitHub on your behalf without needing exact usernames. Each entry includes the person's full name, GitHub username, and common name aliases for fuzzy matching (e.g., nicknames, shortened names).
+
+### `shared-rules/<company>-*.md` (gitignored)
+
+Company-specific shared rules containing proprietary conventions, internal tooling commands, or codebase-specific patterns. These follow the same format as the public shared rules but cover things like internal CLI aliases, company-specific migration conventions, custom framework patterns, and internal spec helper conventions.
 
 ## Development Workflows
 
