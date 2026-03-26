@@ -17,7 +17,7 @@ DIRS_TO_LINK = {
 }.freeze
 
 # Directories to symlink subdirectories from (each child directory becomes a symlink)
-SUBDIRS_TO_LINK = %w[skills].freeze
+SUBDIRS_TO_LINK = %w[skills hooks].freeze
 
 # Directories to symlink as a whole directory
 # Keys are source dirs in repo, values are target paths under ~/.claude/
