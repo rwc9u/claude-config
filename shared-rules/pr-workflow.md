@@ -19,7 +19,8 @@
   - **PRs based off other branches or stacked PRs**: Create as draft
   - **Override**: Can explicitly request draft or ready status regardless of base branch
 - **Always assign to rwc9u** unless explicitly stated otherwise
-- **CI Label (`run-ci`) Rules**:
+- **CI Label (`run-ci`) Rules** (kajabi-products repo only):
+  - **Only applies** when working in the `kajabi-products` repository. Do not offer or add `run-ci` in any other repo.
   - **Prompt** whether `run-ci` label should be added
   - **Do NOT add** `run-ci` label when PR is based off any other branch or stacked on another PR
   - **Override**: Can still explicitly request to add/remove `run-ci` label regardless of base branch
