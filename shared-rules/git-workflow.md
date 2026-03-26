@@ -31,10 +31,6 @@
 - **refactor**: "extract [component/method]"
 - **test**: "add specs for [component]"
 
-### Attribution Rules
-- **Never include** Claude Code attribution or co-author information in commit messages
-- **Keep commits personal** - all commits should appear as the developer's work without AI attribution
-
 ### Commit Body Structure
 - **Always use two paragraphs** for commit message bodies
 - **First paragraph**: Context and problem description - what problem we're solving and how it was discovered
