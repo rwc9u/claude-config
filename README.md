@@ -27,8 +27,6 @@ claude-config/
 │   └── review-architect.md       # Code review and quality assurance agent
 ├── commands/                      # Custom Claude Code slash commands
 │   ├── brainstorm.md             # Interactive idea refinement
-│   ├── create-prd.md             # Product requirements generation
-│   ├── create-erd.md             # Engineering requirements generation
 │   ├── generate-tasks.md         # Task breakdown from requirements
 │   ├── task-orchestrator.md      # Automated task execution with AI agents
 │   ├── process-task-list.md      # Manual task list workflow guidance
@@ -189,8 +187,6 @@ This repository provides end-to-end workflows for feature development:
 ```
 /brainstorm (vague idea)
     ↓
-/create-prd or /create-erd (clear requirements)
-    ↓
 /generate-tasks (task breakdown)
     ↓
 /task-orchestrator (AI implements) or /process-task-list (manual)
@@ -284,8 +280,6 @@ This repository includes 10+ custom Claude Code slash commands. See [commands/RE
 - `/brainstorm` - Interactively refine vague ideas through guided questions
 
 **Requirements & Planning:**
-- `/create-prd` - Generate Product Requirements Documents
-- `/create-erd` - Generate Engineering Requirements Documents
 - `/generate-tasks` - Create detailed task breakdowns from requirements
 
 **Implementation:**
@@ -577,10 +571,10 @@ git branch -d claude-fix-validation
 /brainstorm
 
 # 2. Create requirements
-/create-prd  # or /create-erd
+/generate-tasks tasks/brainstorm-feature-name.md
 
 # 3. Generate tasks
-/generate-tasks tasks/prd-feature-name.md
+/generate-tasks tasks/brainstorm-feature-name.md
 
 # 4. Implement
 /task-orchestrator tasks/tasks-feature-name.md  # or /process-task-list
@@ -615,8 +609,7 @@ git branch -d claude-fix-login-validation
 
 ```bash
 git checkout -b claude-export-csv
-/create-erd
-/generate-tasks tasks/erd-export-csv.md
+/generate-tasks tasks/brainstorm-export-csv.md
 /process-task-list tasks/tasks-export-csv.md
 /create-pr
 /update-docs
@@ -632,8 +625,7 @@ git branch -d claude-export-csv
 ```bash
 git checkout -b claude-analytics
 /brainstorm
-/create-prd
-/generate-tasks tasks/prd-analytics.md
+/generate-tasks tasks/brainstorm-analytics.md
 /task-orchestrator tasks/tasks-analytics.md
 /create-pr
 /update-docs
@@ -665,8 +657,6 @@ Tasks are stored in `tasks/` directory:
 ### Generated File Locations
 
 - `tasks/brainstorm-*.md` - Brainstorm outputs
-- `tasks/prd-*.md` - Product requirements
-- `tasks/erd-*.md` - Engineering requirements
 - `tasks/tasks-*.md` - Task breakdowns
 
 ### Command Chaining
@@ -674,8 +664,8 @@ Tasks are stored in `tasks/` directory:
 Commands are designed to chain together:
 
 ```bash
-/create-erd                                    # → tasks/erd-feature.md
-/generate-tasks tasks/erd-feature.md          # → tasks/tasks-feature.md
+/brainstorm                                    # → tasks/brainstorm-feature.md
+/generate-tasks tasks/brainstorm-feature.md   # → tasks/tasks-feature.md
 /task-orchestrator tasks/tasks-feature.md     # → implements & commits
 ```
 

@@ -3,7 +3,7 @@ description: Interactively refine a vague feature idea through guided questions 
 allowed-tools: Read, Write
 ---
 
-You are facilitating an **interactive brainstorming session** to help refine a vague feature idea into a clear, well-understood concept that can be turned into a PRD.
+You are facilitating an **interactive brainstorming session** to help refine a vague feature idea into a clear, well-understood concept ready for task generation.
 
 ## Your Role
 
@@ -95,10 +95,9 @@ After all sections are confirmed, create a concise summary:
 
 ### Next Steps
 This idea is now ready for:
-- `/create-prd` to generate a Product Requirements Document
-- `/create-erd` to generate an Engineering Requirements Document
+- `/generate-tasks` to create a detailed task breakdown for implementation
 
-Would you like me to create one of these documents, or continue refining?
+Would you like me to generate tasks, or continue refining?
 ```
 
 Save this summary to `/tasks/brainstorm-[feature-name].md`
@@ -186,4 +185,4 @@ You should NOT:
 - ❌ Write code or create detailed specs
 - ❌ Make assumptions without asking
 - ❌ Continue without user confirmation
-- ❌ Skip directly to PRD/ERD creation
+- ❌ Skip directly to task generation

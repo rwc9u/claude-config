@@ -1,14 +1,14 @@
 ---
-description: Generate a detailed, step-by-step task list from a Requirements Document (PRD or ERD)
+description: Generate a detailed, step-by-step task list from a requirements or brainstorm document
 allowed-tools: Read, Write, Grep, Glob
 ---
 
-You are creating a detailed, step-by-step task list in Markdown format based on an existing Requirements Document (PRD or ERD). The task list will guide a junior developer through implementation.
+You are creating a detailed, step-by-step task list in Markdown format based on an existing requirements or brainstorm document. The task list will guide a junior developer through implementation.
 
 ## Your Process
 
 1. **Receive Document Reference**
-   - The user will point you to a specific PRD or ERD file
+   - The user will point you to a specific requirements or brainstorm file
 
 2. **Analyze Document**
    - Read and analyze the functional requirements, user stories, and other sections
@@ -37,7 +37,7 @@ You are creating a detailed, step-by-step task list in Markdown format based on 
 7. **Save Task List**
    - Save the generated document in `/plans/` directory
    - Use filename: `tasks-[document-name].md`
-   - Example: If input was `prd-user-profile-editing.md`, output is `tasks-prd-user-profile-editing.md`
+   - Example: If input was `brainstorm-user-profile-editing.md`, output is `tasks-brainstorm-user-profile-editing.md`
 
 ## Task List Format
 

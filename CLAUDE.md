@@ -24,8 +24,6 @@ claude-config/
 │   └── review-architect.md       # Code review and quality assurance agent
 ├── commands/                      # Claude Code slash commands
 │   ├── brainstorm.md             # Interactive idea refinement
-│   ├── create-prd.md             # Product requirements generation
-│   ├── create-erd.md             # Engineering requirements generation
 │   ├── generate-tasks.md         # Task breakdown from requirements
 │   ├── task-orchestrator.md      # Automated task execution with AI agents
 │   ├── process-task-list.md      # Manual task list workflow
@@ -105,13 +103,7 @@ allowed-tools: Bash, Read, Edit, Write, Task, SlashCommand
    - Update task completion status (`[ ]` → `[x]`)
    - Pause for user approval between steps
 
-2. **Requirements Commands** (`/create-prd`, `/create-erd`):
-   - Ask clarifying questions
-   - Generate structured documentation
-   - Save to `tasks/prd-*.md` or `tasks/erd-*.md`
-   - Optionally integrate with Linear
-
-3. **Git Commands** (`/smart-commit`, `/create-pr`):
+2. **Git Commands** (`/smart-commit`, `/create-pr`):
    - Analyze git state
    - Follow branch naming: `<TICKET>-claude-<feature>` or `claude-<feature>`
    - Enforce proper workflows (never commit to main)
@@ -174,8 +166,6 @@ Mark completed tasks with `[x]`.
 
 ### Directory Structure for Generated Files
 - `tasks/brainstorm-*.md` - Output from `/brainstorm`
-- `tasks/prd-*.md` - Product requirements from `/create-prd`
-- `tasks/erd-*.md` - Engineering requirements from `/create-erd`
 - `tasks/tasks-*.md` - Task breakdowns from `/generate-tasks`
 
 ## Integration with Other Projects
@@ -224,7 +214,7 @@ Since this is a configuration/documentation repository, "testing" means:
 1. **Validate markdown syntax:** Ensure files render correctly
 2. **Test commands in real projects:** Use slash commands in actual development
 3. **Verify agent behavior:** Check that implementer/review-architect work as intended
-4. **Validate workflows:** Run through complete workflows (brainstorm → PRD → tasks → implementation)
+4. **Validate workflows:** Run through complete workflows (brainstorm → tasks → implementation)
 5. **Test Rakefile tasks:** Verify `rake setup` and `rake uninstall` work correctly
 
 ## Common Patterns
@@ -283,8 +273,6 @@ Large features follow this pattern:
 Idea (vague)
   ↓ /brainstorm
 Clear Idea
-  ↓ /create-prd or /create-erd
-Requirements Document
   ↓ /generate-tasks
 Task List
   ↓ /task-orchestrator (AI) or /process-task-list (manual)
