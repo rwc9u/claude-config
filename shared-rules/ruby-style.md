@@ -27,7 +27,10 @@ user = {
 }
 ```
 
-## Line Length & Wrapping (80 characters)
+## Line Length & Wrapping (use project's rubocop config)
+- **Always check the project's rubocop `Layout/LineLength` max** before wrapping lines: `bundle exec rubocop --show-cops Layout/LineLength`
+- **Do NOT default to 80 characters** — most projects use 120. Only break lines when they actually exceed the configured limit.
+- **Avoid unnecessary string continuations** with `\` — these make code harder to read, especially with long method names like Rails path helpers
 - **Assignment wrapping**: break after `=`
 ```ruby
 some_variable =
