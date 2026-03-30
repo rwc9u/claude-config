@@ -70,6 +70,37 @@ git branch -d <branch-name> && git push origin --delete <branch-name>
 - **task-name**: Short 2-3 word description of specific task/sub-task for this branch
 - **Examples**: `rc/timezone-fix01-admin-dropdown`, `rc/user-auth02-oauth-integration`
 
+### Rebasing with `--onto` (Stacked Branches / Merged Base)
+
+Use `git rebase --onto` when a branch's base has been merged to main and a
+normal rebase would introduce duplicate commits.
+
+**When to use:**
+- Your branch was based on another feature branch that has since been merged
+- You need to move commits to a new base without replaying already-merged work
+
+**How to use:**
+```bash
+# First checkout branch-b
+# Run git log and copy the SHA of the commit right before the first
+# commit of branch-b (SHA-0)
+git rebase --onto main SHA-0 branch-b
+# Essentially this rebases your branch-b on main but cuts out
+# everything from branch-b from SHA-0 and older
+```
+
+This replays only the commits unique to your branch onto `main`, avoiding
+duplicates from the already-merged base branch.
+
+**After rebasing onto, you'll need to force push:**
+```bash
+git push --force-with-lease origin branch-b
+```
+
+**Conflict resolution:** During the rebase, if conflicts arise on files that
+were changed in both the merged base and your branch, take your branch's
+version if the base changes are already in main.
+
 ## Quality Checks
 - Ensure descriptions are in imperative mood
 - Limit first line to 72 characters for commits
