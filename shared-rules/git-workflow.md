@@ -82,10 +82,13 @@ normal rebase would introduce duplicate commits.
 **How to use:**
 ```bash
 # First checkout branch-b
+# Always fetch to ensure you have the latest main — a stale local main
+# will cause unnecessary conflicts with already-merged work
+git fetch origin main
 # Run git log and copy the SHA of the commit right before the first
 # commit of branch-b (SHA-0)
-git rebase --onto main SHA-0 branch-b
-# Essentially this rebases your branch-b on main but cuts out
+git rebase --onto origin/main SHA-0 branch-b
+# Essentially this rebases your branch-b on origin/main but cuts out
 # everything from branch-b from SHA-0 and older
 ```
 
@@ -100,6 +103,34 @@ git push --force-with-lease origin branch-b
 **Conflict resolution:** During the rebase, if conflicts arise on files that
 were changed in both the merged base and your branch, take your branch's
 version if the base changes are already in main.
+
+### Checking if a Branch Has Been Merged
+
+**Always check GitHub PR state first** — do not rely solely on git-level checks.
+
+Git-level commands like `git branch --merged` and `git cherry` fail to detect
+squash-merged or rebase-merged branches because the resulting commit SHAs on
+main differ from the original branch commits.
+
+**Preferred approach:**
+```bash
+# Check if a PR exists for the branch and its merge state
+gh pr list --state merged --head <branch-name>
+```
+
+**Why git-level checks are unreliable:**
+- `git branch -r --merged origin/main` — only finds branches whose commits are
+  direct ancestors of main. Squash merges create new SHAs, so the branch won't
+  appear as merged.
+- `git cherry origin/main HEAD` — compares patch IDs. Squash merges that combine
+  multiple commits change the patch signature, so commits show as unmerged.
+
+**When to use each:**
+- **`gh pr list --state merged --head <branch>`** — use this first, works
+  regardless of merge strategy (squash, rebase, or merge commit)
+- **`git branch --merged`** — only reliable for standard merge commits
+- **`git cherry`** — only reliable for single-commit branches that were
+  rebase-merged without modification
 
 ## Quality Checks
 - Ensure descriptions are in imperative mood
