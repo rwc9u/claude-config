@@ -168,6 +168,12 @@ Present the results in this format:
 ### Slack Activity
 - Paste the Slack sub-agent's formatted channel summaries directly
 
+### TL;DR
+- 3-4 bullet points summarizing the day's most significant accomplishments and activities
+- Focus on outcomes and decisions, not raw activity counts
+- Synthesize across all sources (e.g., "Shipped the timezone fix PR after discussing approach in #platform-eng")
+- Keep each bullet to one sentence
+
 ### Quick Stats
 | Category | Count |
 |----------|-------|
