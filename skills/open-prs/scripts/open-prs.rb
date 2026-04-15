@@ -71,6 +71,7 @@ class OpenPrs
       "gh", "search", "prs",
       "--author=#{username}",
       "--state=open",
+      "--archived=false",
       "--limit", "100",
       "--json", SEARCH_FIELDS,
     )
@@ -88,6 +89,7 @@ class OpenPrs
       "gh", "search", "prs",
       "--review-requested=#{username}",
       "--state=open",
+      "--archived=false",
       "--limit", "100",
       "--json", SEARCH_FIELDS,
     )
@@ -102,6 +104,7 @@ class OpenPrs
       "gh", "search", "prs",
       "--reviewed-by=#{username}",
       "--state=open",
+      "--archived=false",
       "--limit", "100",
       "--json", SEARCH_FIELDS,
     )
