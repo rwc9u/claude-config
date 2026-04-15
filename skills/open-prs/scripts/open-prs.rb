@@ -129,7 +129,7 @@ class OpenPrs
 
       # Build a single GraphQL query for all PRs in this repo
       fragments = repo_prs.each_with_index.map do |pr, i|
-        "pr#{i}: pullRequest(number: #{pr["number"]}) { number reviewDecision }"
+        "pr#{i}: pullRequest(number: #{pr["number"]}) { number reviewDecision headRefName }"
       end
 
       query = "query { repository(owner: \"#{owner}\", name: \"#{name}\") { #{fragments.join(" ")} } }"
@@ -146,7 +146,9 @@ class OpenPrs
         data = JSON.parse(output)
         repo_prs.each_with_index do |pr, i|
           decision = data.dig("pr#{i}", "reviewDecision")
+          branch = data.dig("pr#{i}", "headRefName")
           pr["reviewDecision"] = decision if decision
+          pr["headRefName"] = branch if branch
         end
       rescue JSON::ParserError
         # Skip enrichment for this repo on parse failure
@@ -207,11 +209,11 @@ class OpenPrs
 
     puts ""
     if include_author
-      puts "| Repo | PR | Title | Author | Status | Updated |"
-      puts "|------|-----|-------|--------|--------|---------|"
+      puts "| Repo | PR | Title | Branch | Author | Status | Updated |"
+      puts "|------|-----|-------|--------|--------|--------|---------|"
     else
-      puts "| Repo | PR | Title | Status | Updated |"
-      puts "|------|-----|-------|--------|---------|"
+      puts "| Repo | PR | Title | Branch | Status | Updated |"
+      puts "|------|-----|-------|--------|--------|---------|"
     end
 
     prs.each do |pr|
@@ -219,14 +221,15 @@ class OpenPrs
       number = pr["number"]
       url = pr["url"]
       title = truncate(pr["title"].to_s, 60)
+      branch = pr["headRefName"] || "?"
       status = format_status(pr)
       updated = format_date(pr["updatedAt"])
 
       if include_author
         author = pr.dig("author", "login") || "?"
-        puts "| #{repo} | [##{number}](#{url}) | #{title} | @#{author} | #{status} | #{updated} |"
+        puts "| #{repo} | [##{number}](#{url}) | #{title} | `#{branch}` | @#{author} | #{status} | #{updated} |"
       else
-        puts "| #{repo} | [##{number}](#{url}) | #{title} | #{status} | #{updated} |"
+        puts "| #{repo} | [##{number}](#{url}) | #{title} | `#{branch}` | #{status} | #{updated} |"
       end
     end
   end
