@@ -42,6 +42,12 @@
 - **QA Testing Guidelines**: Provide clear testing instructions
 - **Note**: Do not include the Checklist section from the template
 
+### PR Description Length
+- **Keep PR descriptions concise**: Aim for under 500 words total
+- **Word count scope**: Count words across Linear Ticket, Description, and Solution sections only
+- **Excluded from count**: Customer Impact and QA Testing Guidelines are excluded from the 500-word limit, as they may need to be exhaustive to communicate user impact and testing steps
+- **When over the limit**: Tighten the Description and Solution sections rather than trimming Customer Impact or QA Testing Guidelines
+
 ## GitHub CLI Integration
 - **Always use `gh` CLI** for all GitHub interactions instead of web interface or other tools
 - **Never prompt for confirmation** when reading PRs or their diffs with the `gh` command
