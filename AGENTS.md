@@ -173,6 +173,9 @@ See [shared-rules/testing.md](shared-rules/testing.md) for comprehensive testing
 - **Issue tracking**: Check available MCPs (Linear). If both available, ask user which to use
 - **GitHub CLI (`gh`)**: Use for PR and issue management operations
 
+### Claude Code Token Usage
+- **Check Claude Code token/cost usage**: Run `npx ccusage@latest` to see token usage and costs across recent Claude Code sessions
+
 ### Code Comments and Logging
 - **Prefer self-documenting code**: Variable and function names should clearly express intent
 - **Minimal comments**: Only add comments to explain "why" decisions were made, not "what" code does
