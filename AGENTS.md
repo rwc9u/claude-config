@@ -17,6 +17,7 @@ Core workflow guidance for AI agents working on software development projects.
 - **Communicate Limitations**: Proactively inform about constraints, risks, or technical limitations you identify
 - **Request Context**: When uncertain about architecture, priorities, or requirements, explicitly ask for guidance
 - **Explain Reasoning**: Share the "why" behind technical decisions and recommendations
+- **GitHub Comments**: When posting to GitHub via `gh pr comment`, `gh issue comment`, or `gh pr review` with a body, start the body with the line `> This is a bot response.` followed by a blank line, then the actual message (enforced by a PreToolUse hook)
 
 ---
 
