@@ -132,6 +132,50 @@ gh pr list --state merged --head <branch-name>
 - **`git cherry`** — only reliable for single-commit branches that were
   rebase-merged without modification
 
+## Fetching & Pulling Safely
+
+### Never Do Shallow Fetches or Clones
+
+**Always fetch, pull, and clone with full history.** Shallow operations truncate
+the commit graph and corrupt local copies of remote-tracking branches. The
+symptoms look alarming but have a mundane cause:
+
+- Local `main` shows as **diverged from `origin/main`** even though no one
+  force-pushed (branch protection makes that nearly impossible) — the local
+  history is simply incomplete, not actually divergent.
+- `git blame` attributes lines to the wrong author, or collapses everyone onto a
+  single commit, because the older commits that actually touched those lines were
+  never fetched.
+- Rebases and merges hit phantom conflicts against already-merged work.
+
+**Forbidden flags** on `git clone`, `git fetch`, and `git pull` — these create or
+extend a shallow repository:
+- `--depth=<n>` (including `--depth 1`)
+- `--shallow-since=<date>`
+- `--shallow-exclude=<ref>`
+
+Do **not** interrupt a `git fetch`/`git pull` midstream either. A command cut off
+before it finishes can leave remote-tracking refs in a non-atomic,
+partially-updated state that produces the same diverged-branch symptoms.
+
+**If you think you genuinely need a shallow operation** — for example, a one-off
+on a very large repo where fetching full history is impractical — stop and ask
+first, explaining why. Never run a shallow fetch/clone silently; full history is
+always the default.
+
+### Detecting and Fixing a Shallow Repository
+
+```bash
+# Check whether the current repo is shallow (prints "true" if it is)
+git rev-parse --is-shallow-repository
+
+# Restore the full history when it is shallow
+git fetch --unshallow origin
+```
+
+After `--unshallow`, the spurious divergence with `origin/main` disappears and
+`git blame` reports correct authorship again.
+
 ## Quality Checks
 - Ensure descriptions are in imperative mood
 - Limit first line to 72 characters for commits
