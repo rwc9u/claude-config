@@ -138,8 +138,10 @@ Launch an Agent (subagent_type: "general-purpose") with the following prompt. Pa
 While the two sub-agents run, directly call `gcal_list_events`:
 - `timeMin`: `TARGET_DATET00:00:00`
 - `timeMax`: `TARGET_DATET23:59:59`
-- `timeZone`: `America/Chicago`
+- `timeZone`: `America/Denver` (Mountain Time — user's local zone)
 - `condenseEventDetails`: true
+
+Render any timestamps to the user in Mountain Time (MT). If you need to confirm the user's actual local timezone, run `date +"%Z %z"` at the start of the command and use whatever it returns instead of hardcoding `America/Denver`.
 
 Filter out:
 - All-day events that appear to be holidays, OOO markers, or working location events (include them in a separate note if present)
