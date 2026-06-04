@@ -53,6 +53,7 @@ Core workflow guidance for AI agents working on software development projects.
 4. Review changes for security issues
 5. Write clear commit messages
 6. Create pull request in draft mode if requested (mark ready when complete)
+7. Review comments. Code commenting is good, but should not reference tickets or stories and should not be overly verbose.
 
 ---
 
