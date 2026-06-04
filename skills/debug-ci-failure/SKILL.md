@@ -88,6 +88,33 @@ mcp__circleci-mcp-server__get_job_test_results
 - Commit SHA
 - Whether the build passed, failed, or is still running
 
+#### Handling `Build not found` — presigned URL expiry
+
+`get_build_failure_logs` and the v1.1 `/project/.../<build-num>` endpoint return `output_url` fields shaped like `https://circleci.com/api/private/output/presigned/<uuid>/0/<step>?token=<JWT>`. The JWT has an `exp` claim ~17 minutes from issue time. After that, the URL returns `{"message":"Build not found"}` — **this is not a real missing-build error, it is a stale token**.
+
+When you hit `Build not found`:
+
+1. **Immediately re-fetch a fresh presigned URL** via the same MCP call (or v1.1 `/project/.../<build-num>`) — do not give up, do not tell the user the build is missing, do not spend tokens guessing.
+2. Use the fresh URL right away. If that also fails, then escalate as a real missing-build situation.
+
+Fresh URL via v1.1 (when the MCP cache is also stale):
+
+```bash
+source .envrc
+curl -sS -H "Circle-Token: $CIRCLECI_TOKEN" \
+  "https://circleci.com/api/v1.1/project/github/<org>/<repo>/<build-num>" \
+  | python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+for s in d.get("steps", []):
+    for a in s.get("actions", []):
+        if a.get("status") in ("failed","timedout"):
+            print(a["name"], a.get("output_url",""))
+'
+```
+
+If a user re-shares the same job URL later in the conversation, **always re-fetch fresh `output_url`s** before reading logs. Cached presigned URLs from earlier in the session are almost certainly expired.
+
 ### Step 3: Bridge to Datadog with the Pipeline ID
 
 The CircleCI pipeline ID is the key that connects CircleCI runs to Datadog CI Test Visibility. Use it to search for test events in Datadog.
