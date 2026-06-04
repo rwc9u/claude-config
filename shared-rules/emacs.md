@@ -49,6 +49,51 @@ When reviewing GitHub PRs:
 2. Get the list of modified files from `gh pr diff <PR_NUMBER>`
 3. Open all modified files at once with `emacsclient -n file1 file2 file3...`
 
+## macOS: `emacsclient` can't find the socket (TMPDIR)
+
+On macOS, a GUI Emacs (`/Applications/Emacs.app`, launched via Finder/Dock)
+creates its server socket under the **per-user Darwin temp dir**, not under
+`/tmp`. That directory is what `getconf DARWIN_USER_TEMP_DIR` prints (e.g.
+`/var/folders/tt/8763sqf95lvg3zr01p6dwwr00000gp/T/`), and the socket lives at:
+
+```
+$(getconf DARWIN_USER_TEMP_DIR)emacs$(id -u)/server
+```
+
+`emacsclient` finds the socket by looking under `$TMPDIR`. A normal interactive
+terminal already has `TMPDIR` set to that same Darwin dir, so plain
+`emacsclient …` just works. But **some shells run with a different/sandboxed
+`TMPDIR`** (for example an agent or CI shell where `TMPDIR=/tmp/...`). In those
+shells `emacsclient` looks in the wrong place and fails with:
+
+```
+emacsclient: can't find socket; have you started the server?
+```
+
+This is **not** a sign the server is down — it's the wrong `TMPDIR`. Fix by
+prefixing the real Darwin temp dir:
+
+```bash
+# Works regardless of the shell's TMPDIR
+TMPDIR="$(getconf DARWIN_USER_TEMP_DIR)" emacsclient -n +42 path/to/file.rb
+```
+
+Confirm the socket exists first when debugging:
+
+```bash
+ls -la "$(getconf DARWIN_USER_TEMP_DIR)emacs$(id -u)/server"
+```
+
+### Version match
+Use the client bundled with the running app so versions match
+(`emacsclient --version` should equal the app's Emacs version). For an
+`emacs-plus-app` / emacsformacosx install:
+
+```bash
+/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -n +42 path/to/file.rb
+```
+
 ## Checking Emacs Server Availability
-- Use `emacsclient -e '(+ 1 1)'` to verify the Emacs server is running
-- If the server is not running, inform the user and suggest starting Emacs or running `emacs --daemon`
+- Verify the server with (TMPDIR-safe): `TMPDIR="$(getconf DARWIN_USER_TEMP_DIR)" emacsclient -e '(+ 1 1)'`
+- A `can't find socket` error on macOS usually means the wrong `TMPDIR` (see above), **not** a stopped server — retry with the `TMPDIR` prefix before concluding the server is down
+- If the server is genuinely not running, inform the user and suggest `M-x server-start` in their Emacs, or running `emacs --daemon`
