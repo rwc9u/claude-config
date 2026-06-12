@@ -8,6 +8,19 @@
 - Fill out all relevant sections with meaningful content
 - **Linear Ticket Format**: Always format as markdown link: `[PE-123](https://linear.app/kajabi/issue/PE-123/issue-title)`
 
+## Ticket References
+
+- **Code comments: NEVER reference tickets.** No `PE-####`, `See JIRA-###`, or
+  Linear links anywhere in source code. This is the one firm rule — ticket
+  references are noise in the code and git history.
+- **Commit messages: tickets are fine.** Keep subjects conventional
+  (e.g. `feat(web-next): ...`); including a ticket ID is acceptable.
+- **PR descriptions: include the ticket.** A Linear Ticket markdown-link section
+  in the PR body is wanted for traceability.
+- Keep PR descriptions, commit messages, and comments concise — signal over
+  ceremony; trim long paragraphs and QA checklists to essentials.
+- Avoid ticket IDs in branch names when practical.
+
 ## PR Updates and Edits
 - **ALWAYS pull latest PR description** before making any edits using `gh pr view <number>`
 - **This is critical** to ensure any changes made through the GitHub web interface are incorporated
