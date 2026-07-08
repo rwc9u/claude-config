@@ -32,7 +32,7 @@ Launch an Agent (subagent_type: "general-purpose") with the following prompt. Pa
 > ```bash
 > gh search prs --author=rwc9u --created=TARGET_DATE --json title,url,state,repository,createdAt --limit 20
 > gh search prs --author=rwc9u --merged-at=TARGET_DATE --json title,url,state,repository --limit 20
-> gh search prs --reviewed-by=rwc9u --updated=TARGET_DATE --json title,url,state,repository,author --limit 20
+> gh search prs --reviewed-by=rwc9u --updated=TARGET_DATE --json title,url,state,repository,author --limit 30
 > gh search issues --author=rwc9u --created=TARGET_DATE --json title,url,state,repository --limit 20
 > gh search commits --author=rwc9u --author-date=TARGET_DATE --json repository,sha,commit --limit 30
 > ```
@@ -46,7 +46,16 @@ Launch an Agent (subagent_type: "general-purpose") with the following prompt. Pa
 >
 > After all results are in, process them:
 >
-> 1. **PRs reviewed**: Filter out PRs authored by `rwc9u` (those are your own PRs, not reviews). Also filter out PRs that were not actually updated on TARGET_DATE — the `--updated` flag can return stale results.
+> 1. **PRs reviewed (IMPORTANT — verify, do not guess)**: The `--reviewed-by` search returns candidate PRs but its `--updated` filter is loose, so you MUST verify each one against the reviews API instead of inferring from the search output. Do NOT zero this out or hand-wave it — a non-empty `--reviewed-by` result almost always means real reviews happened.
+>    - First drop any candidate where `author.login == rwc9u` (you don't review your own PRs).
+>    - For every remaining candidate, call the reviews API to get the real review state and submission date:
+>      ```bash
+>      gh api "repos/<owner>/<repo>/pulls/<number>/reviews" \
+>        --jq '.[] | select(.user.login=="rwc9u") | "\(.state) \(.submitted_at[0:10])"'
+>      ```
+>      (On Monday, run this for both TARGET_DATE and the WEEKEND_SAT..WEEKEND_SUN range.)
+>    - Keep a PR only if `rwc9u` submitted a review whose `submitted_at` date falls within the target window. Record the review `state` (APPROVED / CHANGES_REQUESTED / COMMENTED); a PR may have multiple review rows — treat APPROVED as the headline state if present.
+>    - Count each qualifying PR once. If the verified count is 0, double-check the candidate list was actually empty before reporting 0.
 > 2. **Commits**: Exclude automated/bot commits (e.g., datadog_dashboards "Changes as of run" commits where the committer is github-actions[bot]).
 > 3. **PR summaries**: For each PR created or merged by the user, write a 1-2 sentence summary based on the title and commit message. Focus on "what" and "why", not implementation details.
 > 4. **Weekend**: If Monday, keep weekend results in a separate group labeled "Weekend".
@@ -63,7 +72,7 @@ Launch an Agent (subagent_type: "general-purpose") with the following prompt. Pa
 >   Summary: ...
 >
 > ## PRs Reviewed (Friday)
-> - [repo#number](url) by @author — title
+> - [repo#number](url) by @author — title [✅ Approved | 🔄 Changes requested | 💬 Commented]
 >   Summary: ...
 >
 > ## Weekend PRs Created (if Monday)
