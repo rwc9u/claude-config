@@ -12,6 +12,10 @@ COMMENT_COMMAND_PATTERN = /\bgh\s+(pr\s+comment|issue\s+comment|pr\s+review)\b/
 # like `gh pr review --approve` (no body) are fine.
 BODY_FLAG_PATTERN = /(?:^|\s)(?:-b|--body|--body-file)\b/
 
+# Initiating a Cursor review is a command directed at the bot, not a
+# human-facing reply, so it is exempt from the preamble requirement.
+CURSOR_REVIEW_PATTERN = /@cursor\s+review\b/
+
 begin
   input_data = JSON.parse($stdin.read)
 rescue JSON::ParserError => e
@@ -23,6 +27,7 @@ command = input_data.dig("tool_input", "command").to_s
 
 exit 0 unless command.match?(COMMENT_COMMAND_PATTERN)
 exit 0 unless command.match?(BODY_FLAG_PATTERN)
+exit 0 if command.match?(CURSOR_REVIEW_PATTERN)
 exit 0 if command.include?(PREAMBLE)
 
 output = {
