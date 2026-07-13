@@ -1,6 +1,6 @@
 # What Did I Do Yesterday?
 
-You are tasked with generating a comprehensive summary of what the user accomplished on the previous workday. This combines GitHub activity, Slack messages, and Google Calendar meetings into a single daily recap.
+You are tasked with generating a comprehensive summary of what the user accomplished on the previous workday. This combines GitHub activity, Slack messages, Linear ticket activity, and Google Calendar meetings into a single daily recap.
 
 ## Step 1: Determine the Target Date
 
@@ -17,7 +17,7 @@ You are tasked with generating a comprehensive summary of what the user accompli
 
 ## Step 2: Gather Data in Parallel
 
-Launch **two sub-agents and one direct call** in parallel:
+Launch **three sub-agents and one direct call** in parallel:
 
 ### 2a. GitHub Activity Sub-Agent
 
@@ -142,9 +142,66 @@ Launch an Agent (subagent_type: "general-purpose") with the following prompt. Pa
 > Channels/DMs Active: 0
 > ```
 
-### 2c. Google Calendar (Direct Call — No Sub-Agent)
+### 2c. Linear Activity Sub-Agent
 
-While the two sub-agents run, directly call `gcal_list_events`:
+Launch an Agent (subagent_type: "general-purpose") with the following prompt. Pass the computed TARGET_DATE (and WEEKEND_SAT/WEEKEND_SUN if Monday) into the prompt. This sub-agent uses the Linear MCP tools (`mcp__linear-server__*`) — if they are deferred, load `mcp__linear-server__list_issues` and `mcp__linear-server__get_issue` via ToolSearch first.
+
+**Agent prompt:**
+
+> You are gathering Linear ticket activity for a daily recap. The target date is TARGET_DATE. If a weekend window is provided (WEEKEND_SAT..WEEKEND_SUN), include it too — the goal is every status change in the window TARGET_DATE..WEEKEND_SUN (or just TARGET_DATE if no weekend).
+>
+> **Goal:** surface tickets whose *status the user changed* during the window — especially ones with NO PR/commit — so the recap can distinguish "moved the board" from "shipped code".
+>
+> 1. **Fetch candidates.** Call `mcp__linear-server__list_issues` with:
+>    - `assignee: "me"`
+>    - `updatedAt: TARGET_DATE` (this filters to issues updated on/after the start of the target date, which covers the whole window)
+>    - `orderBy: "updatedAt"`
+>    - `limit: 100`
+>    - `includeArchived: true`
+>    Paginate with the returned cursor until `hasNextPage` is false.
+> 2. **Identify status changes in the window.** Linear only exposes dedicated timestamps for a few transitions: `startedAt` (moved into a started/In Progress state), `completedAt` (moved to Done/completed), and `canceledAt` (Canceled). For each issue, keep it if any of `startedAt`, `completedAt`, or `canceledAt` falls within the window (compare the date portion). Record which transition fired and its local date.
+>    - Moves into states WITHOUT a dedicated timestamp (e.g. Todo, In Review, Backlog, Triage) cannot be dated precisely from this API. If an issue's `updatedAt` is in the window and its current status is one of these but none of the dated fields match, list it under a separate "Possible status changes (unconfirmed timing)" group rather than asserting the date.
+> 3. **Cross-reference work.** For each in-window status change, note whether the issue has a linked branch (`gitBranchName`) and whether it looks like code shipped (you will NOT have GitHub data here — just flag whether a git branch name exists and whether the status is Done). The main agent correlates against GitHub/Slack; your job is to flag the "moved to In Progress / In Review with no obvious completion" candidates so it can infer whether real work started.
+> 4. **Do NOT** modify any Linear issue. Read-only.
+>
+> Return a structured summary in this exact format (identifiers as markdown links using each issue's `url`):
+>
+> ```
+> ## Linear Status Changes (Friday)
+> - [PE-1234](url) — title → **In Progress** (started HH:MM local or date)
+>   Git branch: yes/no · Has completion: no
+>   Note: moved to In Progress, no Done state — candidate for "started work, no PR yet"
+> - [PE-5678](url) — title → **Done** (completed date)
+>   Git branch: yes · Has completion: yes
+>
+> ## Weekend Linear Status Changes (if Monday)
+> ...
+>
+> ## Possible status changes (unconfirmed timing)
+> - [PE-9012](url) — title — current status: In Review — updatedAt date (could not confirm the transition date from the API)
+>
+> ## Counts
+> Moved to In Progress: N
+> Moved to Done: N
+> Moved to Canceled: N
+> Other/unconfirmed: N
+> ```
+>
+> If no issues changed status in the window, return:
+> ```
+> ## Linear Status Changes (Friday)
+> No Linear status changes found for the window
+>
+> ## Counts
+> Moved to In Progress: 0
+> Moved to Done: 0
+> Moved to Canceled: 0
+> Other/unconfirmed: 0
+> ```
+
+### 2d. Google Calendar (Direct Call — No Sub-Agent)
+
+While the three sub-agents run, directly call `gcal_list_events`:
 - `timeMin`: `TARGET_DATET00:00:00`
 - `timeMax`: `TARGET_DATET23:59:59`
 - `timeZone`: `America/Denver` (Mountain Time — user's local zone)
@@ -159,7 +216,7 @@ Filter out:
 
 ## Step 3: Compile the Summary
 
-Wait for both sub-agents to complete, then combine their results with the calendar data.
+Wait for all three sub-agents to complete, then combine their results with the calendar data.
 
 Present the results in this format:
 
@@ -179,10 +236,25 @@ Present the results in this format:
 ### Slack Activity
 - Paste the Slack sub-agent's formatted channel summaries directly
 
+### Linear Activity
+- Paste the Linear sub-agent's status-change output directly
+- For each ticket, cross-reference the GitHub data and label it:
+  - **Shipped** — moved to Done AND has a merged/created PR or commit that day
+  - **Started (no code yet)** — moved to In Progress (or In Review with no completion) and has NO PR/commit that day
+  - **Board-only** — status changed but no other signal in any source
+- If the Linear sub-agent reported "Possible status changes (unconfirmed timing)", surface them under a brief caveat rather than asserting the date
+
+### Inferring whether work actually started
+When a ticket moved to **In Progress** with no PR/commit, decide whether it looks like a genuine start vs. a board tidy, and say which. Weigh these signals:
+- **Domain/time correlation** — do Slack messages or meetings that day touch the same project/topic as the ticket? (e.g. ticket is in an "AI Quality" project and there were messages in an AI channel + an AI guild meeting → likely a real start)
+- **No code yet** — absence of a PR/commit means it's most likely investigation/scoping, not implementation; say that explicitly
+- **Standup mentions** — if a Geekbot/standup message names the ticket or its next-step work, that reinforces a real start; if the ticket is absent from the stated plan, lean toward "parked/board-only"
+- State the read plainly (e.g. "Started PE-3469 as investigation, not implementation — no code yet") and, when relevant, flag it as the ticket to check on mid-week if it stays put
+
 ### TL;DR
 - 3-4 bullet points summarizing the day's most significant accomplishments and activities
 - Focus on outcomes and decisions, not raw activity counts
-- Synthesize across all sources (e.g., "Shipped the timezone fix PR after discussing approach in #platform-eng")
+- Synthesize across all sources (e.g., "Shipped the timezone fix PR after discussing approach in #platform-eng", or "Kicked off PE-3469 — moved to In Progress, but looks like early scoping, no code yet")
 - Keep each bullet to one sentence
 
 ### Quick Stats
@@ -194,6 +266,8 @@ Present the results in this format:
 | PRs Reviewed | N |
 | Commits (non-bot) | N |
 | Slack Channels Active | N |
+| Tickets → In Progress | N |
+| Tickets → Done | N |
 
 ---
 
@@ -202,3 +276,5 @@ Present the results in this format:
 - If any data source returns errors or empty results, note it gracefully (e.g., "Could not retrieve Slack activity") rather than failing
 - If the user asks "what did I do on [specific date]", use that date instead of calculating the previous workday
 - Keep the tone conversational and useful — this is a standup prep tool
+- **Linear scope caveat**: the Linear sub-agent only checks tickets **assigned to the user**. A status change on a ticket assigned to someone else won't appear. Mention this once if Linear results are shown, and offer to widen the search on request.
+- **Linear timing caveat**: precise transition dates are only available for started/completed/canceled states. For other moves (Todo, In Review, Backlog, Triage), timing is inferred and should be presented as unconfirmed. Offer to read a specific ticket's activity history if the user wants certainty.
