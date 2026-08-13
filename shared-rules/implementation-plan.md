@@ -38,7 +38,7 @@ ls ~/dev/notes/implementation-plans/
 
 ## Plan Content Structure
 - **Include detailed implementation steps** with file paths and code snippets
-- **Provide background context** explaining the current state and approach
+- **Provide background context** explaining the current state and approach, when that context is not already obvious from the overview
 - **Add comprehensive spec examples** following Kajabi testing patterns
 - **Add testing instructions** and configuration notes
 - **Use markdown formatting** for clarity and organization
@@ -53,16 +53,26 @@ ls ~/dev/notes/implementation-plans/
 
 ## Standard Plan Template
 
+Only **Overview**, **Implementation Approach**, and **Detailed Implementation
+Steps** are required. Every other section is optional: include it when it carries
+information the implementer needs, and omit it entirely when it does not. Do not
+keep a heading and fill it with restated content — an omitted section reads
+better than a padded one.
+
 ```markdown
 # Implementation Plan: [Feature Name]
 
 ## Overview
 Brief description of what this plan accomplishes
 
-## Background
+## Background (optional — omit when Overview already covers it)
 - Current state of the system
 - Problem being solved
 - Why this approach was chosen
+
+Worth including when the current state is non-obvious, when a previous attempt
+failed, or when the chosen approach beat a real alternative. Skip it for
+straightforward work.
 
 ## Implementation Approach
 High-level description of the solution
@@ -102,9 +112,14 @@ Continue with all steps...
 2. Expected behavior
 3. Edge cases to verify
 
-## Benefits
+## Benefits (optional — usually omit)
 - List of benefits this implementation provides
 ```
+
+The Benefits section is filler in most plans: if the Overview stated the problem,
+the benefit is already implied. Include it only when the payoff is genuinely
+non-obvious from the rest of the plan, or when the plan needs to justify itself
+to someone who was not part of the decision.
 
 ## Spec Inclusion Guidelines
 

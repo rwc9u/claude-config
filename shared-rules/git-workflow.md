@@ -32,9 +32,10 @@
 - **test**: "add specs for [component]"
 
 ### Commit Body Structure
-- **Always use two paragraphs** for commit message bodies
+- **Default to two paragraphs** for commit message bodies, in this order:
 - **First paragraph**: Context and problem description - what problem we're solving and how it was discovered
 - **Second paragraph**: Solution approach - what we did to solve it and why we chose that approach
+- **Trivial commits are exempt**: typo fixes, single-line changes, mechanical renames, lockfile bumps, and formatting-only commits can use one paragraph or a subject line alone. Never pad to reach two paragraphs — if the second paragraph would only restate the first or narrate the diff, drop it. The two-paragraph default exists to capture a "why" worth writing down, not to hit a length
 - **Line Wrapping**: Wrap body paragraph lines at 80 characters
   - Insert line break before the word that would exceed 80 characters
   - Continue text on the next line without indentation
