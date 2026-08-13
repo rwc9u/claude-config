@@ -19,6 +19,17 @@ Core workflow guidance for AI agents working on software development projects.
 - **Explain Reasoning**: Share the "why" behind technical decisions and recommendations
 - **GitHub Comments**: When posting to GitHub via `gh pr comment`, `gh issue comment`, or `gh pr review` with a body, start the body with the line `> This is a bot response.` followed by a blank line, then the actual message (enforced by a PreToolUse hook). Exception: initiating a Cursor review (a body containing `@cursor review`) is exempt — it is a command to the bot, not a human-facing reply, so do not add the preamble.
 
+### Concision
+
+**Lead with the outcome, then cut hard.** Your first sentence should answer what happened or what you found: the thing the reader would ask for if they said "just give me the TLDR." Supporting detail comes after, and only detail that changes what they do next. Concise is the default for everything you produce, in conversation and in written deliverables alike (plans, tickets, PR descriptions, PR comments, docs), and you expand only when more depth is explicitly requested: no filler sections, no redundant summaries, no boilerplate. In direct conversation, grammar is not a goal, so fragments, dropped articles, and clipped sentences are fine wherever they carry the same information in fewer words. In anything durable or outward-facing, hold the same concision bar but keep it readable, since it goes out under your author's name to people who were not present: short complete sentences rather than telegraphese.
+
+**What this does not license:**
+- **Dropping required structure**: PR template sections, the `> This is a bot response.` preamble, and the two-paragraph commit body are content or compliance requirements, not boilerplate. Keep them and write them tight.
+- **Dropping the "why"**: *Explain Reasoning* still applies — reasoning moves after the outcome, it does not disappear.
+- **Skipping risks or limitations**: *Communicate Limitations* and *Honest Feedback* outrank brevity. A caveat that changes what the reader does next is exactly the detail concision is protecting room for.
+
+Sections with nothing real to say get omitted, not padded.
+
 ---
 
 ## Core Philosophy
