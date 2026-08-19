@@ -114,6 +114,63 @@ end
 - **Minimal duplication**: Only copy specs affected by the feature flag
 - **Cleanup-ready**: When removing flag, delete entire duplicated block
 
+## Shoulda Matchers
+
+Use one-liners for validations and associations — they read better than
+hand-rolled equivalents:
+
+```ruby
+it { should validate_presence_of(:email) }
+it { should validate_uniqueness_of(:email).case_insensitive }
+it { should validate_length_of(:title).is_at_most(200) }
+it { should validate_inclusion_of(:role).in_array(%w[admin member guest]) }
+
+it { should belong_to(:user) }
+it { should have_many(:comments).dependent(:destroy) }
+it { should have_many(:tags).through(:taggings) }
+```
+
+## Stubbing External Boundaries
+
+Only the boundary gets stubbed — see [testing.md](testing.md) for what counts.
+
+```ruby
+# Third-party API
+allow(Stripe::Charge).to receive(:create).and_return(double(id: "ch_123", status: "succeeded"))
+expect(Stripe::Charge).to have_received(:create)
+
+# Time — freeze rather than computing against Time.current
+travel_to(Time.zone.parse("2024-01-15 10:00:00")) do
+  expect(create(:subscription).expires_at).to eq(Time.current + 1.month)
+end
+
+# Mail delivery
+expect { UserService.create_user(email: "test@example.com") }
+  .to have_enqueued_job(ActionMailer::MailDeliveryJob)
+```
+
+## Avoiding Flakiness
+
+```ruby
+# ❌ order is not guaranteed
+let(:users) { User.all }
+# ✅
+let(:users) { User.order(:created_at) }
+
+# ❌ compares against a moving target
+expect(article.created_at).to eq(Time.current)
+# ✅
+expect(article.created_at).to be_within(1.second).of(Time.current)
+```
+
+## Debugging a Spec
+
+```ruby
+binding.pry              # drop into a console at this point
+save_and_open_page       # system specs: dump the rendered DOM
+save_and_open_screenshot # system specs: capture what the browser saw
+```
+
 ## Integration Notes
 
 ### Auto-Apply Patterns
