@@ -40,17 +40,15 @@ claude-config/
 │   └── list-components/          # Component inventory skill with discovery script
 └── shared-rules/                  # Language-specific and process-specific development guidelines
     ├── coderabbit.md             # CodeRabbit review integration
-    ├── cursor.md                 # Cursor IDE integration
     ├── devops.md                 # EKS environments and Kubernetes aliases
     ├── emacs.md                  # Emacs integration via emacsclient
-    ├── gh.md                     # GitHub CLI usage and PR workflows
     ├── git-workflow.md           # Branch naming, commits, conventional commits
     ├── implementation-plan.md    # Implementation plan writing guidelines
     ├── javascript.md             # JS/TS, React, Hotwire/Stimulus guidelines
-    ├── pr-workflow.md            # Pull request creation and review workflows
+    ├── pr-workflow.md            # Pull request workflows and GitHub CLI usage
     ├── rails-development.md      # Rails dev practices, DB safety, migration commands
     ├── ruby-rails.md             # Rails conventions and best practices
-    ├── testing.md                # RSpec, Jest, FactoryBot, mocking strategies
+    ├── testing.md                # Cross-language testing policy
     ├── todo-lists.md             # TODO.md task management guidelines
     └── <company>-*.md            # (gitignored) Company-specific conventions
 ```
@@ -353,15 +351,14 @@ JavaScript best practices including:
 
 ### Testing ([shared-rules/testing.md](shared-rules/testing.md))
 
-Complete testing guide with:
-- Test categories (unit, integration, system/feature)
-- RSpec setup and configuration
-- Model, controller, and request specs
-- System tests with Capybara
-- JavaScript testing (Jest, React Testing Library)
-- Test data management with FactoryBot
-- Mocking and stubbing strategies
-- Performance optimization for test suites
+Cross-language testing policy:
+- Test categories and what each is responsible for
+- Mocking boundaries (what to mock, what never to mock)
+- Test data strategy and builder cost
+- Coverage targets and flaky-test causes
+
+RSpec mechanics live in [shared-rules/rspec-style.md](shared-rules/rspec-style.md),
+which loads automatically for spec files.
 
 ### Git Workflow ([shared-rules/git-workflow.md](shared-rules/git-workflow.md))
 

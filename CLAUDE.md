@@ -36,7 +36,7 @@ claude-config/
     ├── ruby-rails.md             # Rails conventions and best practices
     ├── rails-development.md      # Rails dev practices, DB safety, migration commands
     ├── javascript.md             # JS/TS guidelines, React, Hotwire
-    ├── testing.md                # RSpec, Jest, FactoryBot, mocking
+    ├── testing.md                # Cross-language testing policy
     └── <company>-*.md            # (gitignored) Company-specific conventions
 ```
 

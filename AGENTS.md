@@ -70,68 +70,33 @@ Sections with nothing real to say get omitted, not padded.
 
 ## Git Workflow
 
-### Branch Management
-- **Never commit to main**: Always work on feature branches; create one automatically if not already on a branch
-- **Feature branch naming**:
-  - With ticket: `<TICKET>-<agent-name>-<feature-description>` (e.g., `MDZ-10-claude-user-authentication`)
-  - Without ticket: `<agent-name>-<feature-description>` (e.g., `claude-refactor-orders`)
-  - Check context for ticket references (Linear, Jira issues) and include if present
+- **Never commit to main**: always work on a feature branch; create one automatically if not already on one.
 
-### Commit Practices
-- **Small, focused commits**: Break work into logical, incremental commits rather than large, monolithic ones
-- **Meaningful commit messages**: Write clear, descriptive messages that explain what and why
-
-### Pre-commit Requirements
-1. Run configured linter (RuboCop, ESLint, etc.) and fix all issues
-2. Verify all tests pass
-
-See [shared-rules/git-workflow.md](shared-rules/git-workflow.md) for detailed git practices.
+See [shared-rules/git-workflow.md](shared-rules/git-workflow.md) for branch naming, commit format, pre-commit requirements, and rebasing.
 
 ---
 
 ## Language-Specific Guidelines
 
-### Ruby on Rails
-- Follow Rails conventions strictly (RESTful routes, MVC pattern)
-- Keep controllers lightweight - business logic belongs in models/services
-- Always write tests (RSpec) with FactoryBot
-- Check Gemfile before adding new dependencies
+Detect the stack before writing code — read the package manifest rather than
+assuming. Detailed conventions live in the shared rules, which load automatically
+when you touch matching files:
 
-See [shared-rules/ruby-rails.md](shared-rules/ruby-rails.md) for detailed Rails conventions.
+- **Ruby/Rails** — [shared-rules/ruby-rails.md](shared-rules/ruby-rails.md), [shared-rules/rails-development.md](shared-rules/rails-development.md)
+- **JavaScript/TypeScript** — [shared-rules/javascript.md](shared-rules/javascript.md). Default to vanilla JS; for Rails apps prefer Hotwire/Stimulus over heavy frameworks, and avoid TypeScript unless the project already uses it.
+- **Testing** — [shared-rules/testing.md](shared-rules/testing.md), [shared-rules/rspec-style.md](shared-rules/rspec-style.md)
 
-### JavaScript
-- Check package.json to understand the stack (React, Vue, vanilla JS, etc.)
-- Default to vanilla JavaScript unless project uses a framework
-- For Rails apps, prefer Hotwire/Stimulus over heavy JS frameworks
-- Avoid TypeScript unless project already uses it
-
-See [shared-rules/javascript.md](shared-rules/javascript.md) for detailed JavaScript conventions.
-
-### Testing
-- Write tests for all new features and bug fixes
-- **Never delete failing tests**: Fix the test or fix the code, but don't remove tests to make the suite pass
-- Unit tests should hit the database (avoid excessive mocking)
-- Mock only external APIs, payment processors, email services
-- Keep tests simple - focus on happy path for system/feature tests
-
-See [shared-rules/testing.md](shared-rules/testing.md) for comprehensive testing guidance.
+**Never delete failing tests.** Fix the test or fix the code — never remove a test
+to make the suite pass.
 
 ---
 
 ## Dependency Management
 
-### General Principles
-- **Check existing dependencies first**: Before adding new packages, check if functionality already exists
-- **Update lockfiles**: Always update appropriate lockfile when adding/updating dependencies
-- **Minimal dependencies**: Add new dependencies only when absolutely necessary
-
-### Ruby/Rails
-- Check the Gemfile for existing gems before adding new ones
-- Run `bundle install` after updating Gemfile and commit Gemfile.lock
-
-### JavaScript/Node.js
-- Maintain lockfiles (package-lock.json, pnpm-lock.yaml, or yarn.lock)
-- Use the project's package manager (npm, pnpm, or yarn)
+- **Check the manifest first.** Read the Gemfile / package.json before adding
+  anything — the capability usually already exists.
+- **Commit the lockfile** with the manifest change, using the project's own
+  package manager.
 
 ---
 
@@ -164,13 +129,6 @@ See [shared-rules/testing.md](shared-rules/testing.md) for comprehensive testing
 2. Make minimal, targeted changes to test hypotheses
 3. Document what you've tried to avoid repeating failed approaches
 4. Update dependencies cautiously - ensure compatibility and test thoroughly
-
-### Common Issues and Solutions
-
-#### Rails Issues
-- **Spring not reloading**: Run `spring stop` and restart server
-- **Migration errors**: Check for pending migrations with `rails db:migrate:status`
-- **Asset issues**: Clear cache with `rails assets:clobber`
 
 ---
 
