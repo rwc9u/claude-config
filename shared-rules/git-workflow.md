@@ -70,6 +70,9 @@ git branch -d <branch-name> && git push origin --delete <branch-name>
 - **NN**: Branch sequence number with zero-padding (01, 02, 03, etc.) for stacked PRs
 - **task-name**: Short 2-3 word description of specific task/sub-task for this branch
 - **Examples**: `rc/timezone-fix01-admin-dropdown`, `rc/user-auth02-oauth-integration`
+- **No ticket ID in the branch name.** This is deliberate, but it means Linear
+  will not auto-attach the PR to its issue — you must attach it explicitly.
+  See [pr-workflow.md](pr-workflow.md#attach-the-pr-to-linear).
 
 ### Rebasing with `--onto` (Stacked Branches / Merged Base)
 

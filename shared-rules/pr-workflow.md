@@ -1,4 +1,4 @@
-# Pull Request Guidelines
+# Pull Request & GitHub CLI Guidelines
 
 ## PR Template Usage
 - **Always use** the PR template from `.github/pull_request_template.md`
@@ -40,6 +40,26 @@
   - Examples of explicit requests: "run CI", "trigger CI", "add CI", "test with CI"
 - **Always open PR in browser** after creation using `gh pr view <number> --web`
 
+## Attach the PR to Linear
+
+**Linear does not auto-attach our PRs.** It attaches only when the issue
+identifier appears in the branch name, the PR title, or as a magic word
+("Fixes FLEX-123") in the description. Our branch convention deliberately omits
+ticket IDs and our titles are conventional-commit style, so none of those fire —
+and the `[FLEX-123](https://linear.app/...)` markdown link the PR template asks
+for does **not** count.
+
+So attachment is an explicit step, not a side effect:
+
+- **Immediately after `gh pr create`**, attach the PR via the Linear MCP —
+  `mcp__linear-server__save_issue` with `id: <TICKET>` and
+  `links: [{url: <PR url>, title: "PR #<n> — <title>"}]`.
+- **Stacked PRs each attach to the same ticket.** One link per PR.
+- **Verify before calling the work done.** Re-read the issue and confirm the
+  attachment landed; don't assume the call succeeded.
+- **If the Linear MCP is unavailable**, add a `Refs FLEX-XXXX` line to the PR
+  description instead — that path does trigger auto-attach.
+
 ## Single Commit PR Creation
 - **When PR contains only one commit**: Use commit message structure to build PR description
 - **PR Title**: Use commit subject line (first line of commit message)
@@ -61,16 +81,33 @@
 - **Excluded from count**: Customer Impact and QA Testing Guidelines are excluded from the 500-word limit, as they may need to be exhaustive to communicate user impact and testing steps
 - **When over the limit**: Tighten the Description and Solution sections rather than trimming Customer Impact or QA Testing Guidelines
 
-## GitHub CLI Integration
-- **Always use `gh` CLI** for all GitHub interactions instead of web interface or other tools
-- **Never prompt for confirmation** when reading PRs or their diffs with the `gh` command
-- **Prefer managing GitHub PRs** with the `gh` command
-- See `gh.md` for complete GitHub CLI usage guidelines
+## GitHub CLI (`gh`)
+
+**Always use the `gh` CLI** for GitHub interactions — PRs, issues, repos, releases,
+projects — rather than the web interface or other tools. Never prompt for
+confirmation when reading PRs or their diffs.
+
+Most commands are discoverable via `gh <topic> --help`. The non-obvious ones:
+
+```bash
+# Create a PR following the defaults above
+gh pr create --draft --assignee rwc9u
+
+# View a PR's inline review comments (not shown by `gh pr view`)
+gh api repos/<owner>/<repo>/pulls/<number>/comments
+
+# Open in browser after creating
+gh pr view <number> --web
+```
+
+- **Complex PR bodies**: pass them via a HEREDOC (`--body "$(cat <<'EOF' ... EOF
+  )"`) so markdown and newlines survive intact.
+- **`gh project` commands need extra scope**. If they fail with a permission
+  error, run `gh auth refresh -s project`.
 
 ## Code Rabbit Reviews
-- **Use custom review prompt** from `~/dev/agent-config/shared-rules/coderabbit.md` to reduce noise while preserving valuable feedback
-- **When user asks** "have Code Rabbit review this" or similar, refer to `~/dev/agent-config/agent-shared-rules/coderabbit.md` for the full custom prompt
-- **See `~/dev/agent-config/shared-rules/coderabbit.md`** for the complete custom review prompt and additional commands
+
+See [coderabbit.md](coderabbit.md) for the review trigger command and custom prompt.
 
 ## Teammate GitHub Username Reference
 
