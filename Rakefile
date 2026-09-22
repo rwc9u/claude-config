@@ -121,6 +121,8 @@ def setup_main_config
   if CLAUDE_MD_TARGET.exist? && !CLAUDE_MD_TARGET.symlink?
     puts "⚠ Skipped #{CLAUDE_MD_TARGET} (file already exists, not a symlink)"
     puts "  To use the repository version, manually backup and remove this file."
+  elsif CLAUDE_MD_TARGET.symlink? && points_to_repo?(CLAUDE_MD_TARGET)
+    puts "= #{CLAUDE_MD_TARGET} already linked"
   elsif CLAUDE_MD_TARGET.symlink?
     if should_overwrite?(CLAUDE_MD_TARGET)
       CLAUDE_MD_TARGET.delete
@@ -151,6 +153,8 @@ def setup_directory_contents(dir_name, target_name = dir_name)
 
     if target_file.exist? && !target_file.symlink?
       puts "⚠ Skipped #{target_file} (file already exists, not a symlink)"
+    elsif target_file.symlink? && points_to_repo?(target_file)
+      puts "= #{target_file} already linked"
     elsif target_file.symlink?
       if should_overwrite?(target_file)
         target_file.delete
@@ -182,6 +186,8 @@ def setup_directory_subdirs(dir_name)
 
     if target_subdir.exist? && !target_subdir.symlink?
       puts "⚠ Skipped #{target_subdir} (directory already exists, not a symlink)"
+    elsif target_subdir.symlink? && points_to_repo?(target_subdir)
+      puts "= #{target_subdir} already linked"
     elsif target_subdir.symlink?
       if should_overwrite?(target_subdir)
         target_subdir.delete
@@ -210,6 +216,8 @@ def setup_dir_symlink(dir_name, target_path)
   if target.exist? && !target.symlink?
     puts "⚠ Skipped #{target} (already exists, not a symlink)"
     puts "  To use the repository version, manually remove this directory."
+  elsif target.symlink? && points_to_repo?(target)
+    puts "= #{target} already linked"
   elsif target.symlink?
     if should_overwrite?(target)
       target.delete
