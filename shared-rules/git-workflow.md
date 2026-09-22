@@ -136,6 +136,43 @@ gh pr list --state merged --head <branch-name>
 - **`git cherry`** — only reliable for single-commit branches that were
   rebase-merged without modification
 
+### Listing the Files You Changed
+
+Tooling that acts on "just my changes" — linters, formatters, targeted spec
+runs — needs an accurate file list. Pick the command by whether the work is
+committed:
+
+```bash
+# Uncommitted work in progress (nothing committed on the branch yet)
+git status --porcelain | awk '{print $2}'
+
+# Committed work on a feature branch, vs. its merge base
+git diff --name-only main...HEAD
+```
+
+**`main...HEAD` is empty on a branch with no commits.** A freshly created branch
+or worktree sits on main's tip, so the merge-base diff finds nothing while the
+working tree is full of edits.
+
+**Never hand a possibly-empty file list to a linter.** Most linters treat "no
+paths" as "lint the entire project" rather than as an error — `rubocop` with no
+arguments walked 27,532 files and took nearly three minutes when the intended
+scope was six. Guard the list before using it:
+
+```bash
+# xargs -r, not an unquoted $files: zsh does not word-split parameter
+# expansions, so a newline-separated list arrives as ONE bogus argument.
+git status --porcelain | awk '{print $2}' | grep '\.rb$' \
+  | xargs -r bundle exec rubocop --force-exclusion
+```
+
+`xargs -r` (`--no-run-if-empty`) is the guard: with no input it runs nothing
+rather than invoking the linter bare. Plain `xargs` on macOS/BSD also skips the
+command on empty input, but `-r` states the intent.
+
+If a lint or spec run over a handful of files takes minutes, that is the
+symptom — check what the tool actually inspected before assuming it is slow.
+
 ## Fetching & Pulling Safely
 
 ### Never Do Shallow Fetches or Clones

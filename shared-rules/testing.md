@@ -16,6 +16,26 @@ Testing policy that applies to every project. Language-specific mechanics live i
   helpers. A test that needs explaining is a test that will be misread.
 - **Fail loudly.** A broken test should say what broke, not just that something did.
 
+## What to Run Locally
+
+**Run only the specs covering the files you changed.** Not the whole suite, not
+the whole engine, not the whole directory — the specs for the files in the diff,
+plus any spec that directly exercises them.
+
+CI is the safety net for everything else. Push the branch, open the PR, and let
+the full suite report what a targeted run could not see; fix real breakage from
+that signal. A green local run of thousands of unrelated examples buys very
+little and costs minutes per iteration.
+
+The same rule governs linting: lint the changed files, not the project. See
+[git-workflow.md](git-workflow.md#listing-the-files-you-changed) for building
+that file list correctly — and for why an empty list silently becomes "lint
+everything."
+
+**Reach for a wider local run only when there is a reason to expect wider
+breakage** — a shared component, a model everything loads, a renamed public
+method, a change to test infrastructure. Name the reason before paying for it.
+
 ## Test Categories
 
 | Category | Scope | Database | Mocking |
@@ -62,10 +82,22 @@ catching the bug you wrote the test for.
 
 ## Performance
 
+These apply to the full suite (CI, or a deliberately wide local run) — they are
+not a reason to widen a local run. Default scope is still the changed files, per
+[What to Run Locally](#what-to-run-locally).
+
 - Precompile assets before a large feature-spec run so individual examples don't
   each pay compilation cost. Clobber first if JS or CSS changed.
+- **In a git worktree, share the asset cache with the main checkout before the
+  first spec run.** A fresh worktree compiles every asset from scratch the first
+  time a spec renders a page — minutes, once per directory. Symlinking
+  `tmp/cache/assets` to the main checkout's fixes it, and is safe because the
+  cache is content-addressed: another branch's assets hash differently and miss
+  rather than collide.
 - Parallelize the suite rather than trimming coverage.
 - Profile before optimizing — `test-prof` will tell you which factories dominate.
+- A targeted run that takes minutes is a signal something is wrong with the
+  invocation, not with the tests. Check what actually got collected.
 
 ## Coverage
 

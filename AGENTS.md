@@ -58,13 +58,15 @@ Sections with nothing real to say get omitted, not padded.
 5. Keep development server running (avoid production builds)
 
 ### Before Completing Work
-1. Ensure all tests pass
-2. Run linter and fix all issues
-3. Remove trailing whitespace
-4. Review changes for security issues
-5. Write clear commit messages
-6. Create pull request in draft mode if requested (mark ready when complete)
-7. Review comments. Code commenting is good, but should not reference tickets or stories and should not be overly verbose.
+1. Run the specs and the linter for the files you changed, and get them green.
+   Scope both to the diff — not the whole suite, not the whole engine. CI covers
+   the rest once the PR is up; see
+   [shared-rules/testing.md](shared-rules/testing.md#what-to-run-locally)
+2. Remove trailing whitespace
+3. Review changes for security issues
+4. Write clear commit messages
+5. Create pull request in draft mode if requested (mark ready when complete)
+6. Review comments. Code commenting is good, but should not reference tickets or stories and should not be overly verbose.
 
 ---
 
@@ -183,12 +185,12 @@ Before completing any code change:
 - [ ] Working on a feature branch (never commit to main, never force push to main)
 - [ ] always ask before running `rm`
 - [ ] always ask before running `kubectl delete`
-- [ ] Tests are written and passing
+- [ ] Tests are written, and the specs for the changed files pass locally
 - [ ] Code follows existing project conventions
 - [ ] External dependencies are mocked appropriately
 - [ ] Error handling is implemented
 - [ ] Code is self-documenting with minimal necessary comments
-- [ ] Linter has been run and issues resolved
+- [ ] Linter has been run on the changed files and issues resolved
 - [ ] Commit message is clear and descriptive
 
 ---
