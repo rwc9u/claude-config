@@ -19,8 +19,10 @@ All arguments are optional and may be combined in any order:
   current branch with `gh pr view` and confirm the target with the user
   before reviewing.
 - `<effort-level>` — one of `low`, `medium`, `high`, `xhigh`, `max`; passed
-  through to the underlying code-review scan. If omitted, the scan uses its
-  own default (the last level the user typed).
+  through to the underlying code-review scan. **If omitted, pass `low`
+  explicitly** — do not let the scan fall back to its own default (the last
+  level the user typed), which makes review time unpredictable. Pass a higher
+  level only when the user asks for one.
 - `--file` — pre-authorizes filing the finished review on GitHub without a
   second confirmation prompt. Without this flag, always ask before filing.
 
@@ -40,10 +42,12 @@ review first.
 
 ### 2. Run the findings scan
 
-Invoke the built-in `code-review` skill with the PR number (and effort level
-if one was given) and wait for its verified findings. If a completed scan for
-the same PR at the same head SHA already exists in this session, reuse it
-instead of re-running.
+Invoke the built-in `code-review` skill with the PR number and an effort
+level — the one the user gave, or `low` when they gave none — and wait for
+its verified findings. Always pass the level; omitting it inherits whatever
+level was last used and can make the scan run far longer than a verdict needs.
+If a completed scan for the same PR at the same head SHA already exists in
+this session, reuse it instead of re-running.
 
 ### 3. Render a verdict
 
