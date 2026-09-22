@@ -50,6 +50,22 @@ Sections with nothing real to say get omitted, not padded.
 3. Review package.json/Gemfile for existing dependencies
 4. Understand the testing framework in use
 
+### Model Routing: Coordinate Here, Implement on Opus
+The main session handles discussion, planning, review, and PR work. Code
+changes run on Opus by one of two routes:
+
+- **`/build`** is the user's explicit hand-off. It runs the rest of that turn
+  on Opus inline, with full conversation context, and the session model
+  returns on the next prompt. Preferred for interactive work.
+- **The `implementer` agent** (model set in `agents/implementer.md`) is for
+  delegated or batch work: task lists, `/task-orchestrator`, or when the user
+  says "go ahead" without `/build`. It has no conversation context, so give it
+  a self-contained brief: files to touch, expected behavior, spec expectations,
+  and acceptance criteria. Review its report, run the checks, and iterate by
+  spawning it again rather than editing code in the main session.
+- **Never use `fork` for implementation.** Forks inherit the parent model.
+- **Exception:** one-line fixes, doc edits, and config tweaks stay in-session.
+
 ### During Development
 1. Follow established code patterns in the codebase
 2. Write tests alongside implementation

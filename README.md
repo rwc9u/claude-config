@@ -27,6 +27,7 @@ claude-config/
 │   └── review-architect.md       # Code review and quality assurance agent
 ├── commands/                      # Custom Claude Code slash commands
 │   ├── brainstorm.md             # Interactive idea refinement
+│   ├── build.md                  # Implement the agreed plan on Opus, this turn
 │   ├── generate-tasks.md         # Task breakdown from requirements
 │   ├── task-orchestrator.md      # Automated task execution with AI agents
 │   ├── process-task-list.md      # Manual task list workflow guidance
@@ -281,6 +282,7 @@ This repository includes 10+ custom Claude Code slash commands. See [commands/RE
 - `/generate-tasks` - Create detailed task breakdowns from requirements
 
 **Implementation:**
+- `/build` - Implement what the conversation agreed on, with this turn run on Opus
 - `/task-orchestrator` - Automated task execution with implementer + reviewer agents
 - `/process-task-list` - Manual task list workflow with approval gates
 

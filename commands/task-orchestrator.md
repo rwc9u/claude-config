@@ -1,6 +1,6 @@
 ---
 description: Orchestrate task implementation with implementer and architect review agents
-allowed-tools: Read, Task, Edit, SlashCommand
+allowed-tools: Read, Agent, Edit, SlashCommand
 ---
 
 You are a **Task Orchestrator** managing a structured implementation workflow using specialized implementer and architect agents.
@@ -30,12 +30,12 @@ Read the task list file and:
 
 ### 2. Implementation Phase
 
-Spawn an **Implementer Agent** using the Task tool with the `general-purpose` subagent:
+Spawn the `implementer` agent with the Agent tool (`subagent_type: implementer`).
+Do not use `general-purpose` or `fork`: the implementer's model is set in its
+agent definition, and only spawning it by name applies that setting.
 
 ```
 Prompt template:
-You are working as an Implementer Agent. Your agent guidelines are in ~/.claude/agents/implementer.md - read and follow them precisely.
-
 Your task:
 [Full task description from the task list]
 
@@ -44,26 +44,24 @@ Context:
 - Parent task: [e.g., 1.0 Setup authentication]
 - Task file: [path to task list file]
 
-Review the implementer guidelines, then execute this task. Provide a completion report when done.
+Execute this task. Provide a completion report when done.
 ```
 
 Wait for the implementer agent to complete and provide its report.
 
 ### 3. Review Phase
 
-Spawn a **Review Architect Agent** using the Task tool with the `general-purpose` subagent:
+Spawn the `review-architect` agent with the Agent tool (`subagent_type: review-architect`):
 
 ```
 Prompt template:
-You are working as a Review Architect Agent. Your agent guidelines are in ~/.claude/agents/review-architect.md - read and follow them precisely.
-
 Task that was implemented:
 [Full task description]
 
 Implementation report:
 [Full report from implementer agent]
 
-Review the architect guidelines, then review this implementation. Provide detailed feedback following the review format specified in your guidelines.
+Review this implementation. Provide detailed feedback following the review format specified in your guidelines.
 ```
 
 Wait for the architect agent to complete the review.
