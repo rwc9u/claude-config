@@ -154,6 +154,28 @@ to make the suite pass.
 - **Minimal comments**: Only add comments to explain "why" decisions were made, not "what" code does
 - **Minimal logging**: Avoid excessive console.log, puts, or debug statements. Only log critical information or errors
 
+#### Comment budget (countable, not judged)
+
+"Can a reader derive this from the code?" is too permissive a test — it
+justifies almost any true statement. Use a line budget instead, because it can
+be checked by counting rather than by taste:
+
+- **One line by default.** Two when the reason genuinely needs a clause.
+- **Three lines is the hard cap**, and only for a landmine: a constraint that is
+  invisible in the code and that a plausible edit would break. A class or module
+  header may use three; nothing else should.
+- **Name the reason in one word before writing more than one line** — landmine,
+  external fact, or invariant. If none of those fits, cut it to one line or
+  delete it.
+
+Never write a comment that explains what the next line does, restates the PR
+description or ticket, narrates alternatives that were considered, or
+editorializes about the author's own judgment.
+
+**Check the diff before committing**, not at review time: count the comment
+lines you added, and for each block over one line, name which of the three
+reasons it is. A reviewer asking for fewer comments means this step was skipped.
+
 ---
 
 ## Learning & Documentation
