@@ -27,6 +27,48 @@
 - **Never assume** the PR description is current - always fetch the latest version first
 - **After fetching**, incorporate any web-based changes before applying requested updates
 
+## Responding to Review Comments
+
+**Anything posted to a human goes under the author's name. Offer it for review
+before it ships.** When asked to address review feedback, state the plan first —
+what you're changing, and how each thread will be answered (a 👍, or a reply) —
+then ask whether they want to see the reply text or would rather you just post
+it. One ask covering all threads, not one per comment. Wait for the answer
+before posting.
+
+This does not gate the code changes; make those and run the checks. It gates
+only what other people read.
+
+**Accepted and implemented → react, don't reply.** A 👍 on the comment is the
+whole response; the commit is the explanation.
+
+```bash
+# Inline review comment
+gh api repos/<owner>/<repo>/pulls/comments/<comment_id>/reactions -f content=+1
+# Top-level PR comment
+gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions -f content=+1
+```
+
+A reply is warranted **only** when the change alone cannot answer the comment:
+
+- **You implemented something materially different** from what was asked (the
+  suggestion would not have worked). Name the difference in a sentence or two.
+- **You are declining.** Get the author's sign-off first — see *Code Review
+  Replies* in the root `CLAUDE.md`.
+- **The reviewer asked a direct question** the diff does not answer.
+
+Cap a warranted reply at ~3 sentences.
+
+**Never**, in a review reply:
+
+- Justify which parts of the feedback you took and which you didn't
+- Restate what the commit already shows ("cut 19 lines to 9, removed X, kept Y")
+- Narrate the iteration, or the specs and linters you ran
+- Editorialize about your own judgment or calibration
+
+A reaction counts as addressing the thread. Where a workflow skill says every
+thread "gets a response," a 👍 satisfies it.
+
 ## PR Creation Defaults
 - **PR Status Based on Branch**:
   - **PRs based off other branches or stacked PRs**: Create as draft
@@ -39,6 +81,38 @@
   - **Override**: Can still explicitly request to add/remove `run-ci` label regardless of base branch
   - Examples of explicit requests: "run CI", "trigger CI", "add CI", "test with CI"
 - **Always open PR in browser** after creation using `gh pr view <number> --web`
+
+## Stacked PR Stack Section
+
+**Every PR in a stack of two or more carries a `### Stack` section**, placed
+between the Linear Ticket section and the Description, so a reviewer landing
+on any PR sees the whole chain and where this PR sits:
+
+```markdown
+### Stack
+
+Merge in list order — 1 first, N last. Each PR's diff is only its own commits.
+
+1. #55944 — fix(clubs): render feed broadcasts through a clubs controller
+2. #55920 — feat(clubs): show unread dots on group feed rows **← this PR**
+3. #55921 — feat(clubs): keep unread dots alive on live-appended feed rows
+```
+
+Format rules:
+
+- **List in merge order, first-to-merge on top.** The intro line states it
+  explicitly ("1 first, N last") so nobody reads the list as bottom-up.
+- **Mark the current PR** with a bold `**← this PR**` suffix on its own row.
+- **Number + title only — no base-branch annotations.** Bases go stale as the
+  stack merges (GitHub retargets each PR automatically when its base merges);
+  the list order already carries the dependency information.
+- The section sits outside the Description/Solution word count.
+
+Maintenance: the section is duplicated across every PR in the stack, so any
+stack change (a PR added, dropped, or retitled) means updating all of them.
+Follow the fetch-latest-then-edit rule above for each body — script it with
+`gh pr view --json body` + `gh pr edit --body-file` rather than rewriting
+bodies by hand.
 
 ## Attach the PR to Linear
 
