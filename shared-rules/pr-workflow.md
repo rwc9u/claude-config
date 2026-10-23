@@ -71,7 +71,7 @@ thread "gets a response," a 👍 satisfies it.
 
 ## PR Creation Defaults
 - **PR Status Based on Branch**:
-  - **PRs based off other branches or stacked PRs**: Create as draft
+  - **Stacked PRs**: Create ready for review, not draft, so they can be approved ahead of merging. State the merge order instead: "Don't merge until the prior PR has been merged."
   - **Override**: Can explicitly request draft or ready status regardless of base branch
 - **Always assign to rwc9u** unless explicitly stated otherwise
 - **CI Label (`run-ci`) Rules** (kajabi-products repo only):
