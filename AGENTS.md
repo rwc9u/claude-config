@@ -17,7 +17,7 @@ Core workflow guidance for AI agents working on software development projects.
 - **Communicate Limitations**: Proactively inform about constraints, risks, or technical limitations you identify
 - **Request Context**: When uncertain about architecture, priorities, or requirements, explicitly ask for guidance
 - **Explain Reasoning**: Share the "why" behind technical decisions and recommendations
-- **GitHub Comments**: When posting to GitHub via `gh pr comment`, `gh issue comment`, or `gh pr review` with a body, start the body with the line `> This is a bot response.` followed by a blank line, then the actual message (enforced by a PreToolUse hook). Exception: initiating a Cursor review (a body containing `@cursor review`) is exempt — it is a command to the bot, not a human-facing reply, so do not add the preamble.
+- **GitHub Comments**: When posting to GitHub via `gh pr comment`, `gh issue comment`, or `gh pr review` with a body, start the body with the line `> This is a bot response.` followed by a blank line, then the actual message (enforced by a PreToolUse hook). Exception: initiating a Cursor review (a body containing `@cursor review`) is exempt — it is a command to the bot, not a human-facing reply, so do not add the preamble. Pending (draft) reviews are different: before adding inline comments to an unsubmitted review (via `gh api`/GraphQL, which the hook does not see), ask whether to include the preamble, since the user edits and submits that review themselves.
 
 ### Concision
 
