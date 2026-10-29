@@ -73,7 +73,7 @@ Only after explicit confirmation (or when `--file` was passed):
 
 - Use `gh pr review <number> --approve` or `--request-changes` (or
   `--comment` for "approve with comments" when approval isn't yours to give)
-- Start the body with `> This is a bot response.` followed by a blank line
+- Start the body with `> 🤖 Posted by Claude on behalf of Rob.` followed by a blank line
 - Body = the verdict rationale plus blocking items; leave non-blocking items
   out unless the user wants them included
 - Never file a review without the user's go-ahead in this session unless

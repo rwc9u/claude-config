@@ -3,7 +3,7 @@
 
 require "json"
 
-PREAMBLE = "> This is a bot response."
+PREAMBLE = "> 🤖 Posted by Claude on behalf of Rob."
 
 # Matches the gh subcommands that post user-visible comments/reviews.
 COMMENT_COMMAND_PATTERN = /\bgh\s+(pr\s+comment|issue\s+comment|pr\s+review)\b/
@@ -17,7 +17,8 @@ BODY_FLAG_PATTERN = /(?:^|\s)(?:-b|--body|--body-file)\b/
 CURSOR_REVIEW_PATTERN = /@cursor\s+review\b/
 
 begin
-  input_data = JSON.parse($stdin.read)
+  # The preamble contains an emoji; a non-UTF-8 locale would crash the parse and fail open.
+  input_data = JSON.parse($stdin.read.force_encoding(Encoding::UTF_8))
 rescue JSON::ParserError => e
   $stderr.puts "Error: Invalid JSON input: #{e.message}"
   exit 1
