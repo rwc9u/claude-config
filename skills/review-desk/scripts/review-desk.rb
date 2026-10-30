@@ -202,17 +202,30 @@ module ReviewDesk
       end
     end
 
+    # Fetch outside the lock so start clicks never wait on GitHub; merge into a fresh read of state.
     def tick
-      locked { |state| tick_locked(state) }
+      @filters = filters
+      snapshot = load_state
+      teams = fetch_teams
+      @my_teams = teams || snapshot["my_teams"] || []
+      fetched = begin
+        candidates = search_requested
+        [candidates, fetch_facts(candidates, snapshot["prs"])]
+      rescue GhError => e
+        warn "[#{Time.now.utc.iso8601}] gh failed, keeping previous state: #{e.message}"
+        nil
+      end
+      locked do |state|
+        state["my_teams"] = teams if teams
+        fetched ? merge_tick(state, *fetched) : render(state, Time.now.utc)
+      end
     end
 
     def start(targets, all: false)
-      locked do |state|
-        entries = state["prs"]
-        keys = all ? startable_keys(entries) : targets.map { |t| resolve(entries, t) }
-        keys.compact.each { |key| mark_start(entries[key]) }
-        tick_locked(state)
-      end
+      return start_all if all
+
+      snapshot = load_state["prs"]
+      targets.filter_map { |t| resolve(snapshot, t) }.each { |key| puts start_one(key).first }
     end
 
     def bots(mode)
@@ -256,28 +269,73 @@ module ReviewDesk
 
     private
 
-    def tick_locked(state)
+    def merge_tick(state, candidates, facts_by_key)
       now = Time.now.utc
-      entries = state["prs"]
-      @filters = filters
-      begin
-        refresh_teams!(state)
-        candidates = search_requested
-        facts_by_key = fetch_facts(candidates, entries)
-      rescue GhError => e
-        warn "[#{now.iso8601}] gh failed, keeping previous state: #{e.message}"
-        render(state, now)
-        return state
-      end
-
-      arrivals = apply_transitions(entries, candidates, facts_by_key, now)
+      arrivals = apply_transitions(state["prs"], candidates, facts_by_key, now)
       notify_arrivals(state, arrivals)
-      spawn_pending(state, now)
       state["last_tick_at"] = now.iso8601
-      render(state, now)
+      spawn_and_render(state, now)
       puts "[#{now.getlocal.strftime("%H:%M")}] #{summary_line(visible_entries(state, now)).delete("*")}"
+    end
+
+    def spawn_and_render(state, now)
+      spawn_pending(state, now)
+      render(state, now)
       set_status(state)
-      state
+    end
+
+    # Returns [message, pr_url]. The PR check runs before the lock so a slow gh call never blocks a tick.
+    def start_one(key)
+      @filters = filters
+      live = check_pr(key) if load_state["prs"].dig(key, "state") == "queued"
+      locked do |state|
+        entry = state["prs"][key]
+        next ["Not tracking #{key}.", nil] unless entry
+
+        refusal = live && live_refusal(entry, live)
+        if refusal
+          render(state, Time.now.utc)
+          next [refusal, entry["url"]]
+        end
+
+        entry["head_sha"] = live["headRefOid"] if live&.dig("headRefOid")
+        unless mark_start(entry)
+          next ["#{short_ref(entry)} is #{entry["state"]}; only queued PRs can be started.", entry["url"]]
+        end
+
+        spawn_and_render(state, Time.now.utc)
+        ["Started #{short_ref(entry)} (#{start_outcome(entry)}).", entry["url"]]
+      end
+    end
+
+    def start_all
+      @filters = filters
+      locked do |state|
+        started = startable_keys(state["prs"]).count { |key| mark_start(state["prs"][key]) }
+        spawn_and_render(state, Time.now.utc)
+        "Started #{started} queued PR#{"s" unless started == 1}.".tap { |message| puts message }
+      end
+    end
+
+    def check_pr(key)
+      repo, number = key.split("#")
+      owner, name = repo.split("/", 2)
+      query = "query { repository(owner: #{owner.to_json}, name: #{name.to_json}) " \
+              "{ pullRequest(number: #{number.to_i}) { state isDraft headRefOid } } }"
+      graphql(query).dig("repository", "pullRequest")
+    rescue GhError => e
+      warn "Could not check #{key} (#{e.message}); starting from cached state."
+      nil
+    end
+
+    def live_refusal(entry, live)
+      reason = if live["state"] != "OPEN" then live["state"].downcase
+      elsif live["isDraft"] then "a draft"
+      end
+      return unless reason
+
+      entry.merge!("state" => "dropped", "state_changed_at" => Time.now.utc.iso8601)
+      "#{short_ref(entry)} is #{reason}; not starting it."
     end
 
     def apply_transitions(entries, candidates, facts_by_key, now)
@@ -395,17 +453,15 @@ module ReviewDesk
         .to_h { |pr| ["#{pr.dig("repository", "nameWithOwner")}##{pr["number"]}", pr["author"] || {}] }
     end
 
-    def refresh_teams!(state)
+    def fetch_teams
       output, status = Open3.capture2(
         "gh", "api", "user/teams", "--paginate",
         "--jq", ".[] | .organization.login + \"/\" + .slug",
       )
-      if status.success?
-        state["my_teams"] = output.split("\n")
-      else
-        warn "Could not list your teams; using the cached list."
-      end
-      @my_teams = state["my_teams"] || []
+      return output.split("\n") if status.success?
+
+      warn "Could not list your teams; using the cached list."
+      nil
     end
 
     def fetch_facts(candidates, entries)
@@ -696,33 +752,11 @@ module ReviewDesk
 
     def respond(route)
       case route.first
-      when :start then ["200 OK", html_page(*start_from_web(route.last))]
-      when :start_all then ["200 OK", html_page(start_all_from_web, nil)]
+      when :start then ["200 OK", html_page(*start_one(route.last))]
+      when :start_all then ["200 OK", html_page(start_all, nil)]
       when :forbidden then ["403 Forbidden", html_page("Missing or wrong token. Use the links in queue.md.", nil)]
       when :not_found then ["404 Not Found", html_page("Unknown path.", nil)]
       else ["400 Bad Request", html_page("Bad request.", nil)]
-      end
-    end
-
-    def start_from_web(key)
-      locked do |state|
-        entry = state["prs"][key]
-        next ["Not tracking #{key}.", nil] unless entry
-
-        unless mark_start(entry)
-          next ["#{short_ref(entry)} is #{entry["state"]}; only queued PRs can be started.", entry["url"]]
-        end
-
-        tick_locked(state)
-        ["Started #{short_ref(entry)} (#{start_outcome(entry)}).", entry["url"]]
-      end
-    end
-
-    def start_all_from_web
-      locked do |state|
-        started = startable_keys(state["prs"]).count { |key| mark_start(state["prs"][key]) }
-        tick_locked(state)
-        "Started #{started} queued PR#{"s" unless started == 1}."
       end
     end
 

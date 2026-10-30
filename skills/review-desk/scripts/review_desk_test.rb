@@ -59,6 +59,14 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "start-requested", Transition.call(entry("start-requested"), facts)
   end
 
+  def test_start_requested_after_fetch_survives_merge_with_new_head
+    assert_equal "start-requested", Transition.call(entry("start-requested"), facts(head_sha: "def"))
+  end
+
+  def test_review_spawned_after_fetch_survives_merge
+    assert_equal "reviewing", Transition.call(entry("reviewing", spawned_at: "t1"), facts)
+  end
+
   def test_reviewing_with_verdict_file_is_verdict_ready
     assert_equal "verdict-ready", Transition.call(entry("reviewing"), facts, verdict_ready: true)
   end

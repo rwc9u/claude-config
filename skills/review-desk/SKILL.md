@@ -52,16 +52,16 @@ $DESK start kajabi-products#60090    # also accepts Kajabi/kajabi-products#60090
 $DESK start --all                    # every queued PR
 ```
 
-`start` marks the PRs `start-requested` and runs a tick right away. Up to
-`--max-concurrent` reviews run at once; the rest start on later ticks as slots
-free. Each review opens as a tab named `<repo>#<n>` in the workspace's right
+`start` marks the PRs `start-requested` and opens review tabs right away, without
+a full refresh. A single-PR start first checks that PR on GitHub and refuses it
+if it is closed, merged, or a draft. Up to `--max-concurrent` reviews run at
+once; the rest start on later ticks as slots free. Each review opens as a tab named `<repo>#<n>` in the workspace's right
 pane. `/review-pr` is never given `--file` — the user files from that tab.
 
 While `watch` runs, the dashboard's **start** and **start all** links do the
 same thing. They hit a listener on `127.0.0.1` that only accepts the random
-token generated when `watch` started, and they wait for the tick to finish
-(about 7s) before answering. Without a running watcher, the dashboard shows
-the `start` commands instead.
+token generated when `watch` started, and they answer in about half a second.
+Without a running watcher, the dashboard shows the `start` commands instead.
 
 ## States
 
