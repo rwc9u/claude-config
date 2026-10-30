@@ -67,6 +67,11 @@ Weigh each finding as a reviewer, not an author:
 Present the verdict first, then blocking items, then non-blocking items.
 Keep it tight — this is for the human reviewer to act on.
 
+When `REVIEW_DESK_DIR` is set, also write the report to
+`$REVIEW_DESK_DIR/<owner>-<repo>-<number>.md` (create the directory if needed).
+Line 1 is `verdict: <Approve|Approve with comments|Request changes>`, line 2 is
+`head: <full 40-character head SHA reviewed>`, then the report.
+
 ### 5. File the review
 
 Only after explicit confirmation (or when `--file` was passed):
