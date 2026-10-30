@@ -665,7 +665,7 @@ module ReviewDesk
     end
 
     def sort_rows(rows)
-      rows.sort_by { |e| [e["direct"] ? 0 : 1, e["teams"].to_a.first.to_s, e["created_at"].to_s] }
+      rows.sort_by { |e| e["created_at"].to_s }.reverse
     end
 
     def render_table(title, rows, extra, now)
