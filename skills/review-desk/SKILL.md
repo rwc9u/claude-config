@@ -39,7 +39,8 @@ DESK="ruby ${SKILL_DIR}/scripts/review-desk.rb"
    `select-workspace`, `focus-pane`, or `focus-panel` — the user switches when ready.
 
 `watch` options: `--interval 300`, `--max-concurrent 3`, `--team <slug>`
-(repeatable; limits which team requests count — direct requests always count).
+(repeatable; limits which team requests count — direct requests always count),
+`--port 47321` (the start-link listener; `watch` exits if the port is taken).
 
 ## Start reviews
 
@@ -55,6 +56,12 @@ $DESK start --all                    # every queued PR
 `--max-concurrent` reviews run at once; the rest start on later ticks as slots
 free. Each review opens as a tab named `<repo>#<n>` in the workspace's right
 pane. `/review-pr` is never given `--file` — the user files from that tab.
+
+While `watch` runs, the dashboard's **start** and **start all** links do the
+same thing. They hit a listener on `127.0.0.1` that only accepts the random
+token generated when `watch` started, and they wait for the tick to finish
+(about 7s) before answering. Without a running watcher, the dashboard shows
+the `start` commands instead.
 
 ## States
 

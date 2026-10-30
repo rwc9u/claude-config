@@ -19,6 +19,11 @@ require "open3"
 require "time"
 require "optparse"
 require "fileutils"
+require "socket"
+require "securerandom"
+require "timeout"
+require "uri"
+require "erb"
 
 module ReviewDesk
   STATE_DIR = File.expand_path("~/.local/state/review-desk")
@@ -30,6 +35,10 @@ module ReviewDesk
   CHECKOUT_ROOT = File.expand_path("~/dev")
   SCRIPT_PATH = File.expand_path("~/.claude/skills/review-desk/scripts/review-desk.rb")
   RETENTION_SECONDS = 24 * 3600
+  DEFAULT_PORT = 47_321
+  REQUEST_TIMEOUT = 5
+  MAX_LINE = 8192
+  MAX_HEADERS = 100
 
   ACTIVE_STATES = %w[queued start-requested reviewing verdict-ready no-checkout].freeze
   DONE_STATES = %w[filed dropped taken].freeze
@@ -123,6 +132,37 @@ module ReviewDesk
     end
   end
 
+  # Pure request routing for the watcher's local listener.
+  module Http
+    module_function
+
+    START_PATH = %r{\A/start/([\w.-]+)/([\w.-]+)/(\d+)\z}
+
+    def route(request_line, token)
+      method, target = request_line.to_s.split(" ", 3)
+      return [:bad_request] unless method == "GET" && target&.start_with?("/")
+
+      path, query = target.split("?", 2)
+      return [:forbidden] unless token_matches?(query_param(query, "t"), token)
+      return [:start_all] if path == "/start-all"
+
+      match = START_PATH.match(path)
+      match ? [:start, "#{match[1]}/#{match[2]}##{match[3]}"] : [:not_found]
+    end
+
+    def query_param(query, name)
+      URI.decode_www_form(query.to_s).to_h[name]
+    rescue ArgumentError
+      nil
+    end
+
+    def token_matches?(given, token)
+      return false if given.to_s.empty? || token.to_s.empty? || given.bytesize != token.bytesize
+
+      given.bytes.zip(token.bytes).sum { |a, b| a ^ b }.zero?
+    end
+  end
+
   class GhError < StandardError; end
 
   class Desk
@@ -144,12 +184,18 @@ module ReviewDesk
       @dry_run = dry_run
       @workspace_override = workspace
       @cmux_warned = false
+      @lock_mutex = Mutex.new
     end
 
-    def watch(interval)
+    def watch(interval, port: DEFAULT_PORT)
+      $stdout.sync = true
+      server = open_listener(port)
+      @token = SecureRandom.hex(16)
       locked do |state|
         state["workspace_ref"] = @workspace_override || ENV["CMUX_WORKSPACE_ID"] || state["workspace_ref"]
+        state["listener"] = { "port" => port, "token" => @token, "pid" => Process.pid }
       end
+      Thread.new { serve(server) }
       loop do
         tick
         sleep interval
@@ -163,12 +209,7 @@ module ReviewDesk
     def start(targets, all: false)
       locked do |state|
         entries = state["prs"]
-        keys = if all
-          now = Time.now.utc
-          entries.select { |_, e| e["state"] == "queued" && Transition.visible?(e, filters, now) }.keys
-        else
-          targets.map { |t| resolve(entries, t) }
-        end
+        keys = all ? startable_keys(entries) : targets.map { |t| resolve(entries, t) }
         keys.compact.each { |key| mark_start(entries[key]) }
         tick_locked(state)
       end
@@ -312,12 +353,18 @@ module ReviewDesk
       new_state = Transition.request_start(entry)
       if new_state == entry["state"]
         warn "#{entry["key"]} is #{entry["state"]}; only queued PRs can be started."
-        return
+        return false
       end
 
       entry["state"] = new_state
       entry["start_requested_at"] = Time.now.utc.iso8601
       puts "#{entry["key"]} → start-requested"
+      true
+    end
+
+    def startable_keys(entries)
+      now = Time.now.utc
+      entries.select { |_, e| e["state"] == "queued" && Transition.visible?(e, filters, now) }.keys
     end
 
     def resolve(entries, target)
@@ -607,6 +654,101 @@ module ReviewDesk
       cmux("set-status", "reviews", status, "--workspace", workspace)
     end
 
+    # --- Listener ---
+
+    def open_listener(port)
+      TCPServer.new("127.0.0.1", port)
+    rescue Errno::EADDRINUSE
+      abort "Port #{port} is already in use. Stop the other watcher or pass --port; links must stay stable."
+    end
+
+    def serve(server)
+      loop do
+        client = server.accept
+        begin
+          handle_request(client)
+        rescue StandardError => e
+          warn "listener: #{e.class}: #{e.message}"
+        ensure
+          client.close
+        end
+      end
+    end
+
+    def handle_request(client)
+      request_line = Timeout.timeout(REQUEST_TIMEOUT) { read_head(client) }
+      status, body = respond(Http.route(request_line, @token))
+      client.write("HTTP/1.1 #{status}\r\nContent-Type: text/html; charset=utf-8\r\n" \
+                   "Content-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+    rescue Timeout::Error
+      nil
+    end
+
+    # Headers are read and discarded so the browser sees a clean response; bodies are never read.
+    def read_head(client)
+      request_line = client.gets("\n", MAX_LINE)
+      MAX_HEADERS.times do
+        line = client.gets("\n", MAX_LINE)
+        break if line.nil? || line.strip.empty?
+      end
+      request_line
+    end
+
+    def respond(route)
+      case route.first
+      when :start then ["200 OK", html_page(*start_from_web(route.last))]
+      when :start_all then ["200 OK", html_page(start_all_from_web, nil)]
+      when :forbidden then ["403 Forbidden", html_page("Missing or wrong token. Use the links in queue.md.", nil)]
+      when :not_found then ["404 Not Found", html_page("Unknown path.", nil)]
+      else ["400 Bad Request", html_page("Bad request.", nil)]
+      end
+    end
+
+    def start_from_web(key)
+      locked do |state|
+        entry = state["prs"][key]
+        next ["Not tracking #{key}.", nil] unless entry
+
+        unless mark_start(entry)
+          next ["#{short_ref(entry)} is #{entry["state"]}; only queued PRs can be started.", entry["url"]]
+        end
+
+        tick_locked(state)
+        ["Started #{short_ref(entry)} (#{start_outcome(entry)}).", entry["url"]]
+      end
+    end
+
+    def start_all_from_web
+      locked do |state|
+        started = startable_keys(state["prs"]).count { |key| mark_start(state["prs"][key]) }
+        tick_locked(state)
+        "Started #{started} queued PR#{"s" unless started == 1}."
+      end
+    end
+
+    def start_outcome(entry)
+      entry["state"] == "reviewing" ? "review tab opened" : "waiting for a free slot"
+    end
+
+    def html_page(message, url)
+      link = url ? %(<p><a href="#{ERB::Util.html_escape(url)}">Open the PR</a></p>) : ""
+      "<!doctype html><title>Review desk</title><p>#{ERB::Util.html_escape(message)}</p>#{link}\n"
+    end
+
+    def listener(state)
+      info = state["listener"]
+      return unless info && info["pid"]
+
+      Process.kill(0, info["pid"])
+      info
+    rescue Errno::ESRCH, Errno::EPERM
+      nil
+    end
+
+    def start_url(info, path)
+      "http://127.0.0.1:#{info["port"]}#{path}?t=#{info["token"]}"
+    end
+
     # --- Dashboard ---
 
     def render(state, now)
@@ -618,15 +760,20 @@ module ReviewDesk
         ["Queued", "queued", :start],
         ["No checkout", "no-checkout", :none],
       ]
+      @listener_info = listener(state)
       updated = now.getlocal.strftime("%a %b %-d %H:%M")
-      lines = ["# Review desk", "", "_Updated #{updated}_ · #{summary_line(entries)}", "", filter_line(state, now), ""]
+      start_all = " · [start all](#{start_url(@listener_info, "/start-all")})" if @listener_info
+      lines = ["# Review desk", "", "_Updated #{updated}_ · #{summary_line(entries)}#{start_all}", "",
+               filter_line(state, now), ""]
       groups.each do |title, group_state, extra|
         rows = sort_rows(entries.select { |e| e["state"] == group_state })
         lines.concat(render_table(title, rows, extra, now))
       end
       recent = entries.select { |e| DONE_STATES.include?(e["state"]) && recent?(e, now) }
       lines.concat(render_table("Recently filed, taken, or dropped", recent, :outcome, now))
-      lines << "Start one: `ruby #{SCRIPT_PATH} start <repo>#<n>` · all queued: `... start --all`"
+      unless @listener_info
+        lines << "Start one: `ruby #{SCRIPT_PATH} start <repo>#<n>` · all queued: `... start --all`"
+      end
       atomic_write(QUEUE_PATH, lines.join("\n") + "\n")
     end
 
@@ -689,10 +836,17 @@ module ReviewDesk
       when :verdict then verdict_cell(entry)
       when :start
         stale = " · [stale verdict](file://#{entry["stale_verdict"]})" if entry["stale_verdict"]
-        "`review-desk.rb start #{short_ref(entry)}`#{stale}"
+        "#{start_cell(entry)}#{stale}"
       when :outcome then outcome_cell(entry)
       when :none then "no `#{checkout_dir(entry["repo"]).sub(Dir.home, "~")}`"
       end
+    end
+
+    def start_cell(entry)
+      return "waiting for a slot" if entry["state"] == "start-requested"
+      return "`review-desk.rb start #{short_ref(entry)}`" unless @listener_info
+
+      "[start](#{start_url(@listener_info, "/start/#{entry["repo"]}/#{entry["number"]}")})"
     end
 
     def verdict_cell(entry)
@@ -757,14 +911,18 @@ module ReviewDesk
     end
 
     # Watch and start both rewrite state.json, so serialize them on a lock file.
+    # The mutex serializes the watch loop and listener thread; flock covers other processes.
     def locked
       FileUtils.mkdir_p(STATE_DIR)
-      File.open(LOCK_PATH, File::RDWR | File::CREAT) do |lock|
-        lock.flock(File::LOCK_EX)
-        state = load_state
-        state["workspace_ref"] = @workspace_override if @workspace_override
-        yield state
-        save_state(state) unless dry_run
+      @lock_mutex.synchronize do
+        File.open(LOCK_PATH, File::RDWR | File::CREAT) do |lock|
+          lock.flock(File::LOCK_EX)
+          state = load_state
+          state["workspace_ref"] = @workspace_override if @workspace_override
+          result = yield state
+          save_state(state) unless dry_run
+          result
+        end
       end
     end
 
@@ -824,6 +982,9 @@ if __FILE__ == $PROGRAM_NAME
     opts.on("--workspace REF", "cmux workspace for review tabs (default: recorded by watch)") do |v|
       options[:workspace] = v
     end
+    opts.on("--port PORT", Integer, "watch: local port for dashboard start links (default: 47321)") do |v|
+      options[:port] = v
+    end
     opts.on("--username USERNAME", "GitHub username (default: rwc9u)") { |v| options[:username] = v }
     opts.on("--dry-run", "Fetch and render only: no spawning, no cmux, state.json untouched") do
       options[:dry_run] = true
@@ -847,7 +1008,7 @@ if __FILE__ == $PROGRAM_NAME
   )
 
   case command
-  when "watch" then desk.watch(options[:interval])
+  when "watch" then desk.watch(options[:interval], port: options[:port] || ReviewDesk::DEFAULT_PORT)
   when "tick" then desk.tick
   when "start"
     abort "start needs a PR reference or --all" if ARGV.empty? && !options[:all]

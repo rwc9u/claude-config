@@ -162,4 +162,36 @@ class ReviewDeskTransitionTest < Minitest::Test
   def test_max_age_off_parses_to_nil
     assert_nil Transition.parse_max_age("off")
   end
+
+  TOKEN = "a1b2c3d4"
+
+  def test_start_path_with_token_routes_to_pr_key
+    route = ReviewDesk::Http.route("GET /start/Kajabi/kajabi-products/60090?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+
+    assert_equal [:start, "Kajabi/kajabi-products#60090"], route
+  end
+
+  def test_start_all_with_token_routes_to_start_all
+    assert_equal [:start_all], ReviewDesk::Http.route("GET /start-all?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_wrong_token_is_forbidden
+    assert_equal [:forbidden], ReviewDesk::Http.route("GET /start/Kajabi/repo/1?t=nope0000 HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_missing_token_is_forbidden
+    assert_equal [:forbidden], ReviewDesk::Http.route("GET /start-all HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_malformed_start_path_is_not_found
+    assert_equal [:not_found], ReviewDesk::Http.route("GET /start/Kajabi/repo/abc?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_non_get_request_is_bad_request
+    assert_equal [:bad_request], ReviewDesk::Http.route("POST /start-all?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_garbage_request_line_is_bad_request
+    assert_equal [:bad_request], ReviewDesk::Http.route("\x16\x03\x01", TOKEN)
+  end
 end
