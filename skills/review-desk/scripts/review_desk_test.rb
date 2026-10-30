@@ -171,6 +171,10 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_nil Transition.parse_max_age("off")
   end
 
+  def test_legend_explains_every_state
+    assert_equal (ReviewDesk::ACTIVE_STATES + ReviewDesk::DONE_STATES).sort, ReviewDesk::LEGEND.keys.sort
+  end
+
   TOKEN = "a1b2c3d4"
 
   def test_start_path_with_token_routes_to_pr_key

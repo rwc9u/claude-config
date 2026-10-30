@@ -44,6 +44,16 @@ module ReviewDesk
   DONE_STATES = %w[filed dropped taken].freeze
   FILTERABLE_STATES = %w[queued start-requested no-checkout].freeze
   DEFAULT_FILTERS = { "show_bots" => false, "max_age_days" => nil }.freeze
+  LEGEND = {
+    "queued" => ["Queued", "waiting for you to click start"],
+    "start-requested" => ["Starting", "start clicked; opens a review tab when a slot frees"],
+    "reviewing" => ["Reviewing", "/review-pr is running in its tab"],
+    "verdict-ready" => ["Verdict ready", "review done; read the verdict and file it from the tab"],
+    "filed" => ["Filed", "your review is on GitHub; a new push sends it back to Queued"],
+    "taken" => ["Taken", "a teammate reviewed it for the team"],
+    "dropped" => ["Dropped", "closed, merged, back to draft, or request withdrawn"],
+    "no-checkout" => ["No checkout", "no `~/dev/<repo>` clone, so it can't start"],
+  }.freeze
 
   Facts = Struct.new(
     :open, :requested, :head_sha, :reviewed_at_head, :taken_by, :checkout,
@@ -798,7 +808,7 @@ module ReviewDesk
       updated = now.getlocal.strftime("%a %b %-d %H:%M")
       start_all = " · [start all](#{start_url(@listener_info, "/start-all")})" if @listener_info
       lines = ["# Review desk", "", "_Updated #{updated}_ · #{summary_line(entries)}#{start_all}", "",
-               filter_line(state, now), ""]
+               filter_line(state, now), "", *legend_lines, ""]
       groups.each do |title, group_state, extra|
         rows = sort_rows(entries.select { |e| e["state"] == group_state })
         lines.concat(render_table(title, rows, extra, now))
@@ -832,6 +842,10 @@ module ReviewDesk
       toggles << "show: #{command_list(show)}" if show.any?
       toggles << "hide: #{command_list(["bots off"])}" if active["show_bots"]
       "Hidden: #{hidden} — #{toggles.join(" · ")}"
+    end
+
+    def legend_lines
+      LEGEND.values.map { |label, meaning| "- **#{label}** — #{meaning}" }
     end
 
     def command_list(args)
