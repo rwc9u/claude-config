@@ -8,6 +8,7 @@
 #   ruby review-desk.rb watch [--interval 300] [--max-concurrent 3] [--team SLUG]...
 #   ruby review-desk.rb tick [--dry-run] [--team SLUG]...
 #   ruby review-desk.rb start <owner/repo#n | repo#n | n> | --all
+#   ruby review-desk.rb prepare <owner/repo#n>
 #   ruby review-desk.rb prune [--yes]
 #   ruby review-desk.rb bots on|off|status
 #   ruby review-desk.rb max-age <days>|off|status
@@ -24,6 +25,7 @@ require "securerandom"
 require "timeout"
 require "uri"
 require "erb"
+require "rbconfig"
 
 module ReviewDesk
   STATE_DIR = File.expand_path("~/.local/state/review-desk")
@@ -32,6 +34,8 @@ module ReviewDesk
   QUEUE_PATH = File.join(STATE_DIR, "queue.md")
   CONFIG_PATH = File.join(STATE_DIR, "config.json")
   VERDICT_DIR = File.join(STATE_DIR, "verdicts")
+  REPO_LOCK_DIR = File.join(STATE_DIR, "locks")
+  PREPARE_ERROR = "worktree creation failed; see its tab"
   CHECKOUT_ROOT = File.expand_path("~/dev")
   SCRIPT_PATH = File.expand_path("~/.claude/skills/review-desk/scripts/review-desk.rb")
   RETENTION_SECONDS = 24 * 3600
@@ -88,6 +92,18 @@ module ReviewDesk
 
     def request_start(entry)
       entry["state"] == "queued" ? "start-requested" : entry["state"]
+    end
+
+    # Only a review still in flight goes back; a tick may have dropped it meanwhile.
+    def prepare_failed(entry, now)
+      return entry unless entry["state"] == "reviewing"
+
+      entry.except("surface").merge("state" => "queued", "last_error" => PREPARE_ERROR,
+                                    "state_changed_at" => now.iso8601)
+    end
+
+    def repo_lock_path(repo)
+      File.join(REPO_LOCK_DIR, "#{repo.tr("/", "-")}.lock")
     end
 
     def spawn_plan(entries, max_concurrent)
@@ -277,6 +293,24 @@ module ReviewDesk
       puts "", "Re-run with --yes to remove these worktrees." unless yes
     end
 
+    # Concurrent `wt switch` runs in one repo race on .git/config; flock frees itself if the tab dies.
+    def prepare(key)
+      repo, number = key.split("#")
+      FileUtils.mkdir_p(REPO_LOCK_DIR)
+      created = File.open(Transition.repo_lock_path(repo), File::RDWR | File::CREAT) do |lock|
+        lock.flock(File::LOCK_EX)
+        system("wt", "-C", checkout_dir(repo), "switch", "pr:#{number}", "--no-cd")
+      end
+      return true if created
+
+      locked do |state|
+        state["prs"][key] = Transition.prepare_failed(state["prs"][key], Time.now.utc) if state["prs"][key]
+        render(state, Time.now.utc)
+      end
+      puts "#{key} went back to Queued; start it again from the dashboard."
+      false
+    end
+
     private
 
     def merge_tick(state, candidates, facts_by_key)
@@ -344,6 +378,7 @@ module ReviewDesk
       end
       return unless reason
 
+      entry.delete("last_error")
       entry.merge!("state" => "dropped", "state_changed_at" => Time.now.utc.iso8601)
       "#{short_ref(entry)} is #{reason}; not starting it."
     end
@@ -368,6 +403,7 @@ module ReviewDesk
     end
 
     def enter_state(entry, old_state, new_state, facts, now)
+      entry.delete("last_error")
       case new_state
       when "queued"
         retire_verdict(entry) if %w[verdict-ready filed].include?(old_state)
@@ -426,6 +462,7 @@ module ReviewDesk
 
       entry["state"] = new_state
       entry["start_requested_at"] = Time.now.utc.iso8601
+      entry.delete("last_error")
       puts "#{entry["key"]} → start-requested"
       true
     end
@@ -630,7 +667,8 @@ module ReviewDesk
       else
         "-x claude -- #{sh_quote(prompt)}"
       end
-      "cd #{sh_quote(checkout_dir(entry["repo"]))} && REVIEW_DESK_DIR=#{sh_quote(VERDICT_DIR)} " \
+      "#{sh_quote(RbConfig.ruby)} #{sh_quote(SCRIPT_PATH)} prepare #{sh_quote(entry["key"])} && " \
+        "cd #{sh_quote(checkout_dir(entry["repo"]))} && REVIEW_DESK_DIR=#{sh_quote(VERDICT_DIR)} " \
         "wt switch pr:#{entry["number"]} #{run}"
     end
 
@@ -892,9 +930,11 @@ module ReviewDesk
 
     def start_cell(entry)
       return "waiting for a slot" if entry["state"] == "start-requested"
-      return "`review-desk.rb start #{short_ref(entry)}`" unless @listener_info
 
-      "[start](#{start_url(@listener_info, "/start/#{entry["repo"]}/#{entry["number"]}")})"
+      failed = " · last try failed (#{cell(entry["last_error"])})" if entry["last_error"]
+      return "`review-desk.rb start #{short_ref(entry)}`#{failed}" unless @listener_info
+
+      "[start](#{start_url(@listener_info, "/start/#{entry["repo"]}/#{entry["number"]}")})#{failed}"
     end
 
     def verdict_cell(entry)
@@ -1017,7 +1057,7 @@ end
 if __FILE__ == $PROGRAM_NAME
   options = { interval: 300, max_concurrent: 3, teams: [], username: "rwc9u" }
   parser = OptionParser.new do |opts|
-    opts.banner = "Usage: #{$PROGRAM_NAME} <watch|tick|start|prune|bots|max-age> [options]"
+    opts.banner = "Usage: #{$PROGRAM_NAME} <watch|tick|start|prepare|prune|bots|max-age> [options]"
     opts.on("--interval SECONDS", Integer, "Seconds between watch ticks (default: 300)") do |v|
       options[:interval] = v
     end
@@ -1061,6 +1101,9 @@ if __FILE__ == $PROGRAM_NAME
   when "start"
     abort "start needs a PR reference or --all" if ARGV.empty? && !options[:all]
     desk.start(ARGV, all: options[:all] || false)
+  when "prepare"
+    abort "prepare needs an owner/repo#n key" if ARGV.empty?
+    exit(desk.prepare(ARGV.first) ? 0 : 1)
   when "prune" then desk.prune(yes: options[:yes] || false)
   when "bots" then desk.bots(ARGV.first)
   when "max-age"

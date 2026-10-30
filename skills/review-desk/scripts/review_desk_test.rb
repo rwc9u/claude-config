@@ -43,6 +43,34 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "no-checkout", Transition.request_start(entry("no-checkout"))
   end
 
+  def test_failed_prepare_sends_reviewing_pr_back_to_queued
+    reset = Transition.prepare_failed(entry("reviewing", surface: "surface:7"), NOW)
+
+    assert_equal "queued", reset["state"]
+    assert_equal ReviewDesk::PREPARE_ERROR, reset["last_error"]
+    assert_equal NOW.iso8601, reset["state_changed_at"]
+    refute reset.key?("surface")
+  end
+
+  def test_failed_prepare_leaves_dropped_pr_alone
+    assert_equal "dropped", Transition.prepare_failed(entry("dropped"), NOW)["state"]
+  end
+
+  def test_repo_lock_path_is_per_repo
+    assert_equal File.join(ReviewDesk::REPO_LOCK_DIR, "Kajabi-kajabi-products.lock"),
+                 Transition.repo_lock_path("Kajabi/kajabi-products")
+  end
+
+  def test_review_command_prepares_worktree_before_switching
+    pr = { "key" => "Kajabi/kajabi-products#59817", "repo" => "Kajabi/kajabi-products", "number" => 59_817 }
+    command = ReviewDesk::Desk.new(username: "rwc9u").send(:review_command, pr)
+
+    prefix = "'#{RbConfig.ruby}' '#{ReviewDesk::SCRIPT_PATH}' prepare 'Kajabi/kajabi-products#59817' && "
+
+    assert command.start_with?(prefix), command
+    assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
+  end
+
   def test_start_requested_with_free_slot_is_spawned
     entries = [entry("reviewing", number: 1), entry("start-requested", number: 2, start_requested_at: "t1")]
 
