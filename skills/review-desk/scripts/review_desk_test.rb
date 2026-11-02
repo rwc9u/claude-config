@@ -71,6 +71,14 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
   end
 
+  def test_sh_quote_survives_embedded_quotes
+    nested = "exec claude '/review-pr 60221 low'"
+    quoted = ReviewDesk::Desk.new(username: "rwc9u").send(:sh_quote, nested)
+    echoed, = Open3.capture2("sh", "-c", "printf %s #{quoted}")
+
+    assert_equal nested, echoed
+  end
+
   def test_start_requested_with_free_slot_is_spawned
     entries = [entry("reviewing", number: 1), entry("start-requested", number: 2, start_requested_at: "t1")]
 

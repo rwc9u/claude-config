@@ -1049,7 +1049,8 @@ module ReviewDesk
     end
 
     def sh_quote(str)
-      "'#{str.gsub("'", %q('\\''))}'"
+      # Block form: in a replacement string, \' means "text after the match".
+      "'#{str.gsub("'") { %q('\\'') }}'"
     end
   end
 end
