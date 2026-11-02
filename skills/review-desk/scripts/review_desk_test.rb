@@ -121,6 +121,34 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "reviewing", Transition.call(entry("reviewing"), facts)
   end
 
+  def test_reviewing_with_closed_tab_is_requeued
+    assert_equal "queued", Transition.call(entry("reviewing"), facts, tab_open: false)
+  end
+
+  def test_reviewing_with_closed_tab_and_verdict_file_is_verdict_ready
+    assert_equal "verdict-ready", Transition.call(entry("reviewing"), facts, verdict_ready: true, tab_open: false)
+  end
+
+  def test_reviewing_with_closed_tab_and_withdrawn_request_is_dropped
+    assert_equal "dropped", Transition.call(entry("reviewing"), facts(requested: false), tab_open: false)
+  end
+
+  def test_tab_counts_open_when_listing_unknown
+    assert Transition.tab_open?(entry("reviewing", surface: "surface:7"), nil)
+  end
+
+  def test_tab_open_when_surface_listed
+    assert Transition.tab_open?(entry("reviewing", surface: "surface:7"), ["surface:3", "surface:7"])
+  end
+
+  def test_tab_closed_when_surface_missing_from_listing
+    refute Transition.tab_open?(entry("reviewing", surface: "surface:7"), ["surface:3"])
+  end
+
+  def test_tab_closed_when_no_surface_recorded_and_listing_known
+    refute Transition.tab_open?(entry("reviewing"), ["surface:3"])
+  end
+
   def test_verdict_ready_with_review_on_head_is_filed
     assert_equal "filed", Transition.call(entry("verdict-ready"), facts(requested: false, reviewed_at_head: true))
   end

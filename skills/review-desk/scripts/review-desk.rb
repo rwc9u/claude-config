@@ -36,6 +36,7 @@ module ReviewDesk
   VERDICT_DIR = File.join(STATE_DIR, "verdicts")
   REPO_LOCK_DIR = File.join(STATE_DIR, "locks")
   PREPARE_ERROR = "worktree creation failed; see its tab"
+  TAB_CLOSED_ERROR = "review tab closed before a verdict"
   CHECKOUT_ROOT = File.expand_path("~/dev")
   SCRIPT_PATH = File.expand_path("~/.claude/skills/review-desk/scripts/review-desk.rb")
   RETENTION_SECONDS = 24 * 3600
@@ -68,7 +69,7 @@ module ReviewDesk
   module Transition
     module_function
 
-    def call(entry, facts, verdict_ready: false)
+    def call(entry, facts, verdict_ready: false, tab_open: true)
       state = entry && entry["state"]
       return(state && "dropped") unless facts.open
       return "filed" if facts.reviewed_at_head && (state || facts.requested)
@@ -79,8 +80,9 @@ module ReviewDesk
         facts.requested && facts.head_sha != entry["review_head"] ? "queued" : state
       when "reviewing"
         return "verdict-ready" if verdict_ready
+        return withdrawn(facts) unless facts.requested
 
-        facts.requested ? state : withdrawn(facts)
+        tab_open ? state : "queued"
       when "queued", "start-requested"
         facts.requested ? state : withdrawn(facts)
       when "no-checkout"
@@ -100,6 +102,11 @@ module ReviewDesk
 
       entry.except("surface").merge("state" => "queued", "last_error" => PREPARE_ERROR,
                                     "state_changed_at" => now.iso8601)
+    end
+
+    # An unknown listing (nil) counts as open: requeueing a live review is worse than missing a closed one.
+    def tab_open?(entry, live_surfaces)
+      live_surfaces.nil? || live_surfaces.include?(entry["surface"])
     end
 
     # GitHub clears a review request once it's answered; keep who asked.
@@ -320,9 +327,11 @@ module ReviewDesk
 
     private
 
+    # Tabs are listed under the state lock, so a start click can't spawn one between listing and transitions.
     def merge_tick(state, candidates, facts_by_key)
       now = Time.now.utc
-      arrivals = apply_transitions(state["prs"], candidates, facts_by_key, now)
+      live = live_surfaces(state) if state["prs"].values.any? { |e| e["state"] == "reviewing" }
+      arrivals = apply_transitions(state["prs"], candidates, facts_by_key, now, live)
       notify_arrivals(state, arrivals)
       state["last_tick_at"] = now.iso8601
       spawn_and_render(state, now)
@@ -390,12 +399,14 @@ module ReviewDesk
       "#{short_ref(entry)} is #{reason}; not starting it."
     end
 
-    def apply_transitions(entries, candidates, facts_by_key, now)
+    def apply_transitions(entries, candidates, facts_by_key, now, live_surfaces)
       arrivals = 0
       facts_by_key.each do |key, raw|
         entry = entries[key]
         facts = build_facts(raw, candidates.include?(key))
-        new_state = Transition.call(entry, facts, verdict_ready: entry ? verdict_ready?(entry) : false)
+        verdict_ready = entry ? verdict_ready?(entry) : false
+        tab_open = entry ? Transition.tab_open?(entry, live_surfaces) : true
+        new_state = Transition.call(entry, facts, verdict_ready: verdict_ready, tab_open: tab_open)
         next if new_state.nil?
 
         entry ||= entries[key] = { "key" => key, "first_seen_at" => now.iso8601 }
@@ -415,6 +426,7 @@ module ReviewDesk
       when "queued"
         retire_verdict(entry) if %w[verdict-ready filed].include?(old_state)
         entry.delete("surface")
+        entry["last_error"] = TAB_CLOSED_ERROR if old_state == "reviewing"
       when "verdict-ready"
         entry["review_head"] = verdict_head(entry) || entry["review_head"]
         announce_verdict(entry)
@@ -724,6 +736,20 @@ module ReviewDesk
       nil
     rescue JSON::ParserError
       nil
+    end
+
+    # Every window counts because the user may move a review tab; any failed listing returns nil.
+    def live_surfaces(state)
+      return unless cmux_available?(state)
+
+      windows = cmux_json("list-windows") or return
+      windows.flat_map do |window|
+        listing = cmux_json("list-workspaces", "--window", window["id"]) or return
+        listing["workspaces"].flat_map do |workspace|
+          panes = cmux_json("list-panes", "--workspace", workspace["id"]) or return
+          panes["panes"].flat_map { |p| p["surface_refs"] or return }
+        end
+      end
     end
 
     def pane_exists?(workspace, pane)

@@ -74,7 +74,9 @@ Without a running watcher, the dashboard shows the `start` commands instead.
 A new head SHA on a `verdict-ready` or `filed` PR that is still requested sends
 it back to `queued`; the old verdict is kept as a stale link. Worktree creation
 is serialized per repo; if it fails, the PR goes back to `queued` with "last try
-failed" in its Start cell and can be started again. The watcher
+failed" in its Start cell and can be started again. A `reviewing` PR whose tab
+is gone (closed, or cmux quit) before a verdict lands goes back to `queued` the
+same way on the next tick. The watcher
 notifies once per tick when PRs arrive, and notifies + flashes the tab when a
 verdict lands.
 
