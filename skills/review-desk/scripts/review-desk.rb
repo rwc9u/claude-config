@@ -127,6 +127,12 @@ module ReviewDesk
       live_surfaces.nil? || live_surfaces.include?(entry["surface"])
     end
 
+    def tabs_to_close(entries, live_surfaces)
+      return [] if live_surfaces.nil?
+
+      entries.select { |e| e["state"] == "filed" && live_surfaces.include?(e["surface"]) }.map { |e| e["key"] }
+    end
+
     # GitHub clears a review request once it's answered; keep who asked.
     def requested_by(entry, direct, teams)
       return { "direct" => direct, "teams" => teams } if direct || teams.any?
@@ -425,8 +431,9 @@ module ReviewDesk
     # Tabs are listed under the state lock, so a start click can't spawn one between listing and transitions.
     def merge_tick(state, candidates, facts_by_key)
       now = Time.now.utc
-      live = live_surfaces(state) if state["prs"].values.any? { |e| e["state"] == "reviewing" }
+      live = live_surfaces(state) if state["prs"].values.any? { |e| e["surface"] }
       arrivals = apply_transitions(state["prs"], candidates, facts_by_key, now, live)
+      close_filed_tabs(state, live)
       notify_arrivals(state, arrivals)
       state["last_tick_at"] = now.iso8601
       spawn_and_render(state, now)
@@ -883,6 +890,18 @@ module ReviewDesk
           panes["panes"].flat_map { |p| p["surface_refs"] or return }
         end
       end
+    end
+
+    # A known listing (only possible when cmux is available) settles every filed tab: closed now, or already gone.
+    def close_filed_tabs(state, live)
+      return if live.nil?
+
+      entries = state["prs"].values
+      workspace = state["workspace_ref"]
+      Transition.tabs_to_close(entries, live).each do |key|
+        cmux("close-surface", "--surface", state["prs"][key]["surface"], "--workspace", workspace, "--force")
+      end
+      entries.each { |e| e.delete("surface") if e["state"] == "filed" }
     end
 
     def pane_exists?(workspace, pane)

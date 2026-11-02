@@ -83,3 +83,6 @@ Only after explicit confirmation (or when `--file` was passed):
   out unless the user wants them included
 - Never file a review without the user's go-ahead in this session unless
   `--file` was explicitly passed
+- When `REVIEW_DESK_DIR` is set, after filing run
+  `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb tick >/dev/null 2>&1 &`
+  as the last step and say the tab will close; the desk closes it within seconds

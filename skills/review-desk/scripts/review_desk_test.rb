@@ -164,6 +164,28 @@ class ReviewDeskTransitionTest < Minitest::Test
     refute Transition.tab_open?(entry("reviewing"), ["surface:3"])
   end
 
+  def test_filed_tab_still_open_is_closed
+    assert_equal ["Kajabi/repo#1"], Transition.tabs_to_close([entry("filed", surface: "surface:7")], ["surface:7"])
+  end
+
+  def test_filed_tab_already_gone_is_not_closed
+    assert_empty Transition.tabs_to_close([entry("filed", surface: "surface:7")], ["surface:3"])
+  end
+
+  def test_unfiled_tabs_stay_open
+    entries = [
+      entry("verdict-ready", number: 1, surface: "surface:1"),
+      entry("reviewing", number: 2, surface: "surface:2"),
+      entry("taken", number: 3, surface: "surface:3"),
+    ]
+
+    assert_empty Transition.tabs_to_close(entries, ["surface:1", "surface:2", "surface:3"])
+  end
+
+  def test_no_tabs_closed_when_listing_unknown
+    assert_empty Transition.tabs_to_close([entry("filed", surface: "surface:7")], nil)
+  end
+
   def test_verdict_ready_with_review_on_head_is_filed
     assert_equal "filed", Transition.call(entry("verdict-ready"), facts(requested: false, reviewed_at_head: true))
   end
