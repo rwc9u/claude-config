@@ -88,7 +88,7 @@ tracked, so turning a filter off restores them at once. They are left out of the
 dashboard, the counts, the sidebar status, arrival notifications, and
 `start --all`, but `start <repo>#<n>` still starts one. Settings live in
 `~/.local/state/review-desk/config.json`; the watcher re-reads them every tick,
-and each change runs a tick right away.
+and each `bots`/`max-age` command runs a tick right away.
 
 | User says | Run |
 |-----------|-----|
@@ -96,6 +96,12 @@ and each change runs a tick right away.
 | "hide bot PRs" (default) | `$DESK bots off` |
 | "only show PRs from the last week" | `$DESK max-age 7` (`7d` also works) |
 | "show all ages" (default) | `$DESK max-age off` |
+
+While `watch` runs, the dashboard's filter line has links for the same changes:
+**bots** show/hide, **age** 7d/30d/all (the current setting is bold), and
+**refresh now**. Filter links only re-render cached state, so they answer about
+as fast as start links; **refresh now** runs a full tick and answers once
+GitHub has been fetched. Without a running watcher, the line shows commands.
 
 `$DESK bots status` and `$DESK max-age status` report the current setting. Age
 is the PR's creation date, as in the dashboard's Age column. Bot PRs are those

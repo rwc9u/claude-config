@@ -177,6 +177,7 @@ module ReviewDesk
     module_function
 
     START_PATH = %r{\A/start/([\w.-]+)/([\w.-]+)/(\d+)\z}
+    MAX_AGE_PATH = %r{\A/max-age/([1-9]\d*)\z}
 
     def route(request_line, token)
       method, target = request_line.to_s.split(" ", 3)
@@ -184,10 +185,20 @@ module ReviewDesk
 
       path, query = target.split("?", 2)
       return [:forbidden] unless token_matches?(query_param(query, "t"), token)
-      return [:start_all] if path == "/start-all"
 
-      match = START_PATH.match(path)
-      match ? [:start, "#{match[1]}/#{match[2]}##{match[3]}"] : [:not_found]
+      case path
+      when "/start-all" then [:start_all]
+      when "/refresh" then [:refresh]
+      when "/bots/on", "/bots/off" then [:bots, path == "/bots/on"]
+      when "/max-age/off" then [:max_age, nil]
+      when MAX_AGE_PATH then [:max_age, Regexp.last_match(1).to_i]
+      when START_PATH then [:start, "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}##{Regexp.last_match(3)}"]
+      else [:not_found]
+      end
+    end
+
+    def url(info, path)
+      "http://127.0.0.1:#{info["port"]}#{path}?t=#{info["token"]}"
     end
 
     def query_param(query, name)
@@ -200,6 +211,52 @@ module ReviewDesk
       return false if given.to_s.empty? || token.to_s.empty? || given.bytesize != token.bytesize
 
       given.bytes.zip(token.bytes).sum { |a, b| a ^ b }.zero?
+    end
+  end
+
+  # Pure dashboard fragments; `listener` is the live listener's info, or nil for command-text fallbacks.
+  module Dashboard
+    module_function
+
+    AGE_CHOICES = [7, 30, nil].freeze
+
+    def filter_line(entries, filters, now, listener)
+      reasons = entries.map { |e| Transition.hidden_reasons(e, filters, now) }
+      days = filters["max_age_days"]
+      counts = []
+      counts << "#{reasons.count { |r| r.include?(:bot) }} bot PRs" unless filters["show_bots"]
+      counts << "#{reasons.count { |r| r.include?(:age) }} older than #{days}d" if days
+      overlap = "; a PR matching both counts once" if counts.size > 1
+      hidden = counts.empty? ? "none" : "#{reasons.count(&:any?)} (#{counts.join(" · ")}#{overlap})"
+      "Hidden: #{hidden} — #{listener ? filter_links(filters, listener) : filter_commands(filters)}"
+    end
+
+    def filter_links(filters, listener)
+      bots = if filters["show_bots"]
+        "**shown** / [hide](#{Http.url(listener, "/bots/off")})"
+      else
+        "[show](#{Http.url(listener, "/bots/on")}) / **hidden**"
+      end
+      current = filters["max_age_days"]
+      ages = (AGE_CHOICES | [current]).sort_by { |d| d || Float::INFINITY }.map do |d|
+        label = d ? "#{d}d" : "all"
+        d == current ? "**#{label}**" : "[#{label}](#{Http.url(listener, "/max-age/#{d || "off"}")})"
+      end
+      "[refresh now](#{Http.url(listener, "/refresh")}) · bots: #{bots} · age: #{ages.join(" · ")}"
+    end
+
+    def filter_commands(filters)
+      show = []
+      show << "bots on" unless filters["show_bots"]
+      show << "max-age off" if filters["max_age_days"]
+      toggles = []
+      toggles << "show: #{command_list(show)}" if show.any?
+      toggles << "hide: #{command_list(["bots off"])}" if filters["show_bots"]
+      toggles.join(" · ")
+    end
+
+    def command_list(args)
+      args.map { |a| "`review-desk.rb #{a}`" }.join(" · ")
     end
   end
 
@@ -243,8 +300,8 @@ module ReviewDesk
     end
 
     # Fetch outside the lock so start clicks never wait on GitHub; merge into a fresh read of state.
+    # Filters are read under the lock so a filter click made mid-fetch isn't rendered over. Returns fetch success.
     def tick
-      @filters = filters
       snapshot = load_state
       teams = fetch_teams
       @my_teams = teams || snapshot["my_teams"] || []
@@ -256,9 +313,11 @@ module ReviewDesk
         nil
       end
       locked do |state|
+        @filters = filters
         state["my_teams"] = teams if teams
         fetched ? merge_tick(state, *fetched) : render(state, Time.now.utc)
       end
+      !fetched.nil?
     end
 
     def start(targets, all: false)
@@ -834,9 +893,36 @@ module ReviewDesk
       case route.first
       when :start then ["200 OK", html_page(*start_one(route.last))]
       when :start_all then ["200 OK", html_page(start_all, nil)]
+      when :refresh then ["200 OK", html_page(refresh, nil)]
+      when :bots then ["200 OK", html_page(show_bots(route.last), nil)]
+      when :max_age then ["200 OK", html_page(show_max_age(route.last), nil)]
       when :forbidden then ["403 Forbidden", html_page("Missing or wrong token. Use the links in queue.md.", nil)]
       when :not_found then ["404 Not Found", html_page("Unknown path.", nil)]
       else ["400 Bad Request", html_page("Bad request.", nil)]
+      end
+    end
+
+    def refresh
+      tick ? "Refreshed — dashboard updated." : "GitHub fetch failed; the dashboard kept its last data."
+    end
+
+    def show_bots(show)
+      rerender_with_filters("show_bots" => show)
+      "Bot PRs #{show ? "shown" : "hidden"} — dashboard updated."
+    end
+
+    def show_max_age(days)
+      rerender_with_filters("max_age_days" => days)
+      "#{days ? "Hiding PRs created more than #{days}d ago" : "Showing PRs of all ages"} — dashboard updated."
+    end
+
+    # Hidden PRs stay tracked, so a filter click only re-renders cached state instead of fetching GitHub.
+    def rerender_with_filters(changes)
+      update_filters(changes)
+      locked do |state|
+        @filters = filters
+        render(state, Time.now.utc)
+        set_status(state)
       end
     end
 
@@ -860,7 +946,7 @@ module ReviewDesk
     end
 
     def start_url(info, path)
-      "http://127.0.0.1:#{info["port"]}#{path}?t=#{info["token"]}"
+      Http.url(info, path)
     end
 
     # --- Dashboard ---
@@ -878,7 +964,8 @@ module ReviewDesk
       updated = now.getlocal.strftime("%a %b %-d %H:%M")
       start_all = " · [start all](#{start_url(@listener_info, "/start-all")})" if @listener_info
       lines = ["# Review desk", "", "_Updated #{updated}_ · #{summary_line(entries)}#{start_all}", "",
-               filter_line(state, now), "", *legend_lines, ""]
+               Dashboard.filter_line(state["prs"].values, @filters || filters, now, @listener_info), "",
+               *legend_lines, ""]
       groups.each do |title, group_state, extra|
         rows = sort_rows(entries.select { |e| e["state"] == group_state })
         lines.concat(render_table(title, rows, extra, now))
@@ -895,31 +982,8 @@ module ReviewDesk
       state["prs"].values.select { |e| Transition.visible?(e, @filters || filters, now) }
     end
 
-    def filter_line(state, now)
-      active = @filters || filters
-      reasons = state["prs"].values.map { |e| Transition.hidden_reasons(e, active, now) }
-      days = active["max_age_days"]
-      counts = []
-      counts << "#{reasons.count { |r| r.include?(:bot) }} bot PRs" unless active["show_bots"]
-      counts << "#{reasons.count { |r| r.include?(:age) }} older than #{days}d" if days
-      overlap = "; a PR matching both counts once" if counts.size > 1
-      hidden = counts.empty? ? "none" : "#{reasons.count(&:any?)} (#{counts.join(" · ")}#{overlap})"
-
-      show = []
-      show << "bots on" unless active["show_bots"]
-      show << "max-age off" if days
-      toggles = []
-      toggles << "show: #{command_list(show)}" if show.any?
-      toggles << "hide: #{command_list(["bots off"])}" if active["show_bots"]
-      "Hidden: #{hidden} — #{toggles.join(" · ")}"
-    end
-
     def legend_lines
       LEGEND.values.map { |label, meaning| "- **#{label}** — #{meaning}" }
-    end
-
-    def command_list(args)
-      args.map { |a| "`review-desk.rb #{a}`" }.join(" · ")
     end
 
     def summary_line(entries)

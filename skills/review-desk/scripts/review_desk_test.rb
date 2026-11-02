@@ -269,6 +269,42 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal [:forbidden], ReviewDesk::Http.route("GET /start-all HTTP/1.1\r\n", TOKEN)
   end
 
+  def test_refresh_with_token_routes_to_refresh
+    assert_equal [:refresh], ReviewDesk::Http.route("GET /refresh?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_bots_on_routes_to_show_bots
+    assert_equal [:bots, true], ReviewDesk::Http.route("GET /bots/on?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_bots_off_routes_to_hide_bots
+    assert_equal [:bots, false], ReviewDesk::Http.route("GET /bots/off?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_max_age_days_routes_to_max_age
+    assert_equal [:max_age, 30], ReviewDesk::Http.route("GET /max-age/30?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_max_age_off_routes_to_no_max_age
+    assert_equal [:max_age, nil], ReviewDesk::Http.route("GET /max-age/off?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_filter_route_without_token_is_forbidden
+    assert_equal [:forbidden], ReviewDesk::Http.route("GET /bots/on HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_malformed_bots_path_is_not_found
+    assert_equal [:not_found], ReviewDesk::Http.route("GET /bots/maybe?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_malformed_max_age_path_is_not_found
+    assert_equal [:not_found], ReviewDesk::Http.route("GET /max-age/abc?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_zero_max_age_path_is_not_found
+    assert_equal [:not_found], ReviewDesk::Http.route("GET /max-age/0?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+  end
+
   def test_malformed_start_path_is_not_found
     assert_equal [:not_found], ReviewDesk::Http.route("GET /start/Kajabi/repo/abc?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
   end
@@ -279,5 +315,57 @@ class ReviewDeskTransitionTest < Minitest::Test
 
   def test_garbage_request_line_is_bad_request
     assert_equal [:bad_request], ReviewDesk::Http.route("\x16\x03\x01", TOKEN)
+  end
+
+  LISTENER = { "port" => 47_321, "token" => TOKEN }.freeze
+
+  def link(path)
+    "http://127.0.0.1:47321#{path}?t=#{TOKEN}"
+  end
+
+  def filter_entries
+    [
+      entry("queued", number: 1, bot: true, created_at: "2026-10-29T12:00:00Z"),
+      entry("queued", number: 2, bot: false, created_at: "2026-10-01T12:00:00Z"),
+      entry("no-checkout", number: 3, bot: true, created_at: "2026-10-01T12:00:00Z"),
+      entry("queued", number: 4, bot: false, created_at: "2026-10-29T12:00:00Z"),
+    ]
+  end
+
+  def test_filter_line_with_listener_links_unset_choices
+    line = ReviewDesk::Dashboard.filter_line(filter_entries, { "show_bots" => false, "max_age_days" => 7 }, NOW,
+                                             LISTENER)
+
+    assert_equal "Hidden: 3 (2 bot PRs · 2 older than 7d; a PR matching both counts once) — " \
+                 "[refresh now](#{link("/refresh")}) · bots: [show](#{link("/bots/on")}) / **hidden** · " \
+                 "age: **7d** · [30d](#{link("/max-age/30")}) · [all](#{link("/max-age/off")})", line
+  end
+
+  def test_filter_line_with_listener_bolds_bots_shown_and_all_ages
+    line = ReviewDesk::Dashboard.filter_line(filter_entries, NO_FILTERS, NOW, LISTENER)
+
+    assert_equal "Hidden: none — [refresh now](#{link("/refresh")}) · " \
+                 "bots: **shown** / [hide](#{link("/bots/off")}) · " \
+                 "age: [7d](#{link("/max-age/7")}) · [30d](#{link("/max-age/30")}) · **all**", line
+  end
+
+  def test_filter_line_with_listener_shows_custom_max_age_in_order
+    line = ReviewDesk::Dashboard.filter_line(filter_entries, { "show_bots" => true, "max_age_days" => 14 }, NOW,
+                                             LISTENER)
+
+    assert line.end_with?("age: [7d](#{link("/max-age/7")}) · **14d** · [30d](#{link("/max-age/30")}) · " \
+                          "[all](#{link("/max-age/off")})"), line
+  end
+
+  def test_filter_line_without_listener_shows_commands
+    line = ReviewDesk::Dashboard.filter_line(filter_entries, { "show_bots" => false, "max_age_days" => 7 }, NOW, nil)
+
+    assert_equal "Hidden: 3 (2 bot PRs · 2 older than 7d; a PR matching both counts once) — " \
+                 "show: `review-desk.rb bots on` · `review-desk.rb max-age off`", line
+  end
+
+  def test_filter_line_without_listener_offers_hiding_shown_bots
+    assert_equal "Hidden: none — hide: `review-desk.rb bots off`",
+                 ReviewDesk::Dashboard.filter_line(filter_entries, NO_FILTERS, NOW, nil)
   end
 end
