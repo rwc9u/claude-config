@@ -10,7 +10,8 @@ One cmux workspace named **Reviews** that tracks every open, non-draft PR where
 review is requested from `rwc9u` directly or from one of his teams. A watcher
 refreshes a markdown dashboard every 5 minutes. Reviews never start on their
 own: the user picks which PRs to start, and each one opens a tab running
-`/review-pr <n> low` inside a `wt` worktree of that PR.
+`/review-pr <n> low` inside a `wt` worktree of that PR. A PR requested only from
+`db-migration-reviewers` gets `/review-migration-pr <n>` instead.
 
 ```bash
 DESK="ruby ${SKILL_DIR}/scripts/review-desk.rb"
@@ -120,7 +121,7 @@ with `app/`.
 - `~/.local/state/review-desk/state.json` — per-PR state, keyed `owner/repo#n`
 - `~/.local/state/review-desk/queue.md` — the dashboard (live-reloads in cmux)
 - `~/.local/state/review-desk/verdicts/<owner>-<repo>-<n>.md` — written by
-  `/review-pr` when `REVIEW_DESK_DIR` is set; its arrival flips the PR to `verdict-ready`
+  `/review-pr` or `/review-migration-pr` when `REVIEW_DESK_DIR` is set; its arrival flips the PR to `verdict-ready`
 
 ## Requirements
 

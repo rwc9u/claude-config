@@ -71,6 +71,21 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
   end
 
+  def test_migration_team_only_request_gets_migration_review
+    assert_equal "/review-migration-pr 7",
+                 Transition.review_prompt(entry("queued", number: 7, teams: ["db-migration-reviewers"]))
+  end
+
+  def test_mixed_team_request_gets_general_review
+    assert_equal "/review-pr 7 low",
+                 Transition.review_prompt(entry("queued", number: 7, teams: ["api-guild", "db-migration-reviewers"]))
+  end
+
+  def test_direct_request_gets_general_review
+    assert_equal "/review-pr 7 low",
+                 Transition.review_prompt(entry("queued", number: 7, direct: true, teams: ["db-migration-reviewers"]))
+  end
+
   def test_requested_by_takes_current_requests
     assert_equal({ "direct" => false, "teams" => ["api-guild"] },
                  Transition.requested_by(entry("queued", teams: ["old-team"]), false, ["api-guild"]))

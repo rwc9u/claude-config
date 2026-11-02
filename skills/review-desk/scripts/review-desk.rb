@@ -37,6 +37,7 @@ module ReviewDesk
   REPO_LOCK_DIR = File.join(STATE_DIR, "locks")
   PREPARE_ERROR = "worktree creation failed; see its tab"
   TAB_CLOSED_ERROR = "review tab closed before a verdict"
+  MIGRATION_TEAM = "db-migration-reviewers"
   CHECKOUT_ROOT = File.expand_path("~/dev")
   SCRIPT_PATH = File.expand_path("~/.claude/skills/review-desk/scripts/review-desk.rb")
   RETENTION_SECONDS = 24 * 3600
@@ -114,6 +115,15 @@ module ReviewDesk
       return { "direct" => direct, "teams" => teams } if direct || teams.any?
 
       { "direct" => entry["direct"], "teams" => entry["teams"] || [] }
+    end
+
+    # Mixed requests get the general review; only a migration-team-only request gets the migration review.
+    def review_prompt(entry)
+      if !entry["direct"] && entry["teams"] == [MIGRATION_TEAM]
+        "/review-migration-pr #{entry["number"]}"
+      else
+        "/review-pr #{entry["number"]} low"
+      end
     end
 
     def repo_lock_path(repo)
@@ -738,7 +748,7 @@ module ReviewDesk
     end
 
     def review_command(entry)
-      prompt = "/review-pr #{entry["number"]} low"
+      prompt = Transition.review_prompt(entry)
       run = if worktree_exists?(entry)
         "-x sh -- -c #{sh_quote("git pull --ff-only && exec claude #{sh_quote(prompt)}")}"
       else
