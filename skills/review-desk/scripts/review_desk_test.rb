@@ -71,6 +71,16 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
   end
 
+  def test_requested_by_takes_current_requests
+    assert_equal({ "direct" => false, "teams" => ["api-guild"] },
+                 Transition.requested_by(entry("queued", teams: ["old-team"]), false, ["api-guild"]))
+  end
+
+  def test_requested_by_keeps_requesters_after_request_clears
+    assert_equal({ "direct" => true, "teams" => ["api-guild"] },
+                 Transition.requested_by(entry("filed", direct: true, teams: ["api-guild"]), false, []))
+  end
+
   def test_sh_quote_survives_embedded_quotes
     nested = "exec claude '/review-pr 60221 low'"
     quoted = ReviewDesk::Desk.new(username: "rwc9u").send(:sh_quote, nested)

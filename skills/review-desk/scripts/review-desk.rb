@@ -102,6 +102,13 @@ module ReviewDesk
                                     "state_changed_at" => now.iso8601)
     end
 
+    # GitHub clears a review request once it's answered; keep who asked.
+    def requested_by(entry, direct, teams)
+      return { "direct" => direct, "teams" => teams } if direct || teams.any?
+
+      { "direct" => entry["direct"], "teams" => entry["teams"] || [] }
+    end
+
     def repo_lock_path(repo)
       File.join(REPO_LOCK_DIR, "#{repo.tr("/", "-")}.lock")
     end
@@ -434,8 +441,7 @@ module ReviewDesk
         "head_ref" => pr["headRefName"],
         "head_sha" => facts.head_sha,
         "created_at" => pr["createdAt"],
-        "direct" => raw[:direct],
-        "teams" => raw[:teams],
+        **Transition.requested_by(entry, raw[:direct], raw[:teams]),
       )
     end
 
