@@ -1,7 +1,7 @@
 ---
 name: review-desk
-description: This skill should be used when the user asks to "start my review desk", "review desk", "track my reviews", "review queue", "start review <n>", "start all reviews", "show/hide bot PRs", "only show PRs from the last week", or invokes /review-desk. It runs a cmux "Reviews" workspace that tracks every open PR awaiting the user's review (direct or team requests), shows a live dashboard, and starts a /review-pr session per PR on request.
-argument-hint: "[start <repo>#<n> | start --all | bots on|off | max-age <days>|off | tick | prune]"
+description: This skill should be used when the user asks to "start my review desk", "review desk", "track my reviews", "review queue", "start review <n>", "review <PR link>", "start all reviews", "show/hide bot PRs", "only show PRs from the last week", or invokes /review-desk. It runs a cmux "Reviews" workspace that tracks every open PR awaiting the user's review (direct or team requests), shows a live dashboard, and starts a /review-pr session per PR on request.
+argument-hint: "[start <repo>#<n> | start <PR URL> | start --all | bots on|off | max-age <days>|off | tick | prune]"
 ---
 
 # Review Desk
@@ -50,8 +50,13 @@ When the user says "start review 60090", "start kajabi-products#60090", or
 
 ```bash
 $DESK start kajabi-products#60090    # also accepts Kajabi/kajabi-products#60090 or a bare 60090
+$DESK start https://github.com/Kajabi/kajabi-products/pull/60090   # any open PR, requested or not
 $DESK start --all                    # every queued PR
 ```
+
+A PR URL works for any open, non-draft PR, even one nobody requested from you
+or one already taken or dropped (filed too, once it has new commits). It becomes a manual entry (Requested
+shows `you (manual)`) that behaves like a direct request and ignores `max-age`.
 
 `start` marks the PRs `start-requested` and opens review tabs right away, without
 a full refresh. A single-PR start first checks that PR on GitHub and refuses it

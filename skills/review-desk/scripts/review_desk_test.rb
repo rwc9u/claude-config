@@ -196,6 +196,79 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "queued", Transition.call(entry("no-checkout"), facts)
   end
 
+  def test_parse_target_reads_plain_pr_url
+    assert_equal "Kajabi/kajabi-products#60275",
+                 Transition.parse_target("https://github.com/Kajabi/kajabi-products/pull/60275")
+  end
+
+  def test_parse_target_reads_files_tab_url
+    assert_equal "Kajabi/kajabi-products#60275",
+                 Transition.parse_target("https://github.com/Kajabi/kajabi-products/pull/60275/files")
+  end
+
+  def test_parse_target_ignores_query
+    assert_equal "Kajabi/kajabi-products#60275",
+                 Transition.parse_target("https://github.com/Kajabi/kajabi-products/pull/60275?w=1")
+  end
+
+  def test_parse_target_ignores_fragment
+    assert_equal "Kajabi/kajabi-products#60275",
+                 Transition.parse_target("http://www.github.com/Kajabi/kajabi-products/pull/60275/#discussion_r1")
+  end
+
+  def test_parse_target_rejects_non_pr_url
+    assert_nil Transition.parse_target("https://github.com/Kajabi/kajabi-products/issues/60275")
+  end
+
+  def test_parse_target_rejects_bare_number
+    assert_nil Transition.parse_target("60275")
+  end
+
+  def manual_facts(**overrides)
+    facts(requested: Transition.requested?(in_search: false, manual: true, draft: false, counted: false), **overrides)
+  end
+
+  def test_manual_request_counts_without_search
+    assert Transition.requested?(in_search: false, manual: true, draft: false, counted: false)
+  end
+
+  def test_manual_draft_is_not_requested
+    refute Transition.requested?(in_search: false, manual: true, draft: true, counted: false)
+  end
+
+  def test_unsearched_pr_is_not_requested
+    refute Transition.requested?(in_search: false, manual: false, draft: false, counted: true)
+  end
+
+  def test_manual_entry_stays_queued_outside_search
+    assert_equal "queued", Transition.call(entry("queued", manual: true), manual_facts)
+  end
+
+  def test_manual_entry_drops_when_closed
+    assert_equal "dropped", Transition.call(entry("queued", manual: true), manual_facts(open: false))
+  end
+
+  def test_taken_entry_adopted_as_manual_survives_next_tick
+    adopted = Transition.adopt_manual(entry("taken", taken_by: "kenmgrimm (approved)"), "Kajabi/repo#1", NOW)
+
+    assert adopted["manual"]
+    refute adopted.key?("taken_by")
+    assert_equal "start-requested",
+                 Transition.call(adopted.merge("state" => "start-requested"),
+                                 manual_facts(taken_by: "kenmgrimm (approved)"))
+  end
+
+  def test_manual_entry_without_requesters_shows_manual_in_requested_column
+    cell = ReviewDesk::Desk.new(username: "rwc9u").send(:request_cell, entry("queued", manual: true, teams: []))
+
+    assert_equal "you (manual)", cell
+  end
+
+  def test_untracked_pr_adopted_as_manual_is_a_new_entry
+    assert_equal({ "key" => "Kajabi/repo#9", "first_seen_at" => NOW.iso8601, "manual" => true },
+                 Transition.adopt_manual(nil, "Kajabi/repo#9", NOW))
+  end
+
   NOW = Time.utc(2026, 10, 30, 12)
   NO_FILTERS = { "show_bots" => true, "max_age_days" => nil }.freeze
   HIDE_BOTS = { "show_bots" => false, "max_age_days" => nil }.freeze
@@ -231,6 +304,14 @@ class ReviewDeskTransitionTest < Minitest::Test
 
   def test_pr_newer_than_max_age_shown
     assert Transition.visible?(entry("queued", created_at: "2026-10-28T12:00:00Z"), LAST_WEEK, NOW)
+  end
+
+  def test_manual_pr_older_than_max_age_shown
+    assert Transition.visible?(entry("queued", manual: true, created_at: "2026-10-20T12:00:00Z"), LAST_WEEK, NOW)
+  end
+
+  def test_manual_bot_pr_still_hidden_when_bots_off
+    refute Transition.visible?(entry("queued", manual: true, bot: true), HIDE_BOTS, NOW)
   end
 
   def test_max_age_off_shows_old_prs

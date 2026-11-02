@@ -7,7 +7,7 @@
 # Usage:
 #   ruby review-desk.rb watch [--interval 300] [--max-concurrent 3] [--team SLUG]...
 #   ruby review-desk.rb tick [--dry-run] [--team SLUG]...
-#   ruby review-desk.rb start <owner/repo#n | repo#n | n> | --all
+#   ruby review-desk.rb start <owner/repo#n | repo#n | n | PR URL> | --all
 #   ruby review-desk.rb prepare <owner/repo#n>
 #   ruby review-desk.rb prune [--yes]
 #   ruby review-desk.rb bots on|off|status
@@ -97,6 +97,23 @@ module ReviewDesk
       entry["state"] == "queued" ? "start-requested" : entry["state"]
     end
 
+    # A manual entry is one the user started from a PR link; it counts as requested while open and not a draft.
+    def requested?(in_search:, manual:, draft:, counted:)
+      (in_search || manual) && !draft && (counted || manual)
+    end
+
+    def adopt_manual(entry, key, now)
+      base = entry || { "key" => key, "first_seen_at" => now.iso8601 }
+      base.except("taken_by", "last_error").merge("manual" => true)
+    end
+
+    PR_URL = %r{\Ahttps?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/pull/(\d+)(?:/files|/commits)?/?(?:[?#].*)?\z}
+
+    def parse_target(str)
+      match = PR_URL.match(str.to_s.strip) or return
+      "#{match[1]}/#{match[2]}##{match[3]}"
+    end
+
     # Only a review still in flight goes back; a tick may have dropped it meanwhile.
     def prepare_failed(entry, now)
       return entry unless entry["state"] == "reviewing"
@@ -156,7 +173,8 @@ module ReviewDesk
       reasons = []
       reasons << :bot if entry["bot"] && !filters["show_bots"]
       max_age = filters["max_age_days"]
-      reasons << :age if max_age && entry["created_at"] && now - Time.parse(entry["created_at"]) > max_age * 86_400
+      aged = max_age && !entry["manual"] && entry["created_at"]
+      reasons << :age if aged && now - Time.parse(entry["created_at"]) > max_age * 86_400
       reasons
     end
 
@@ -334,7 +352,15 @@ module ReviewDesk
       return start_all if all
 
       snapshot = load_state["prs"]
-      targets.filter_map { |t| resolve(snapshot, t) }.each { |key| puts start_one(key).first }
+      targets.each do |target|
+        url_key = Transition.parse_target(target)
+        tracked = url_key ? snapshot.keys.find { |k| k.casecmp?(url_key) } : resolve(snapshot, target)
+        if url_key && (!tracked || DONE_STATES.include?(snapshot.dig(tracked, "state")))
+          puts start_manual(tracked || url_key)
+        elsif tracked
+          puts start_one(tracked).first
+        end
+      end
     end
 
     def bots(mode)
@@ -437,6 +463,40 @@ module ReviewDesk
       end
     end
 
+    # Untracked or finished PRs started from a link; a key a tick has since made active falls back to start_one.
+    def start_manual(key)
+      @filters = filters
+      @my_teams ||= load_state["my_teams"] || []
+      raw = begin
+        fetch_chunk([key])[key]
+      rescue GhError => e
+        return "Could not fetch #{key}: #{e.message}"
+      end
+      return "#{key} was not found on GitHub." unless raw
+
+      reason = closed_reason(raw[:pr])
+      return "#{raw[:repo].split("/").last}##{raw[:pr]["number"]} is #{reason}; not starting it." if reason
+      return "You already reviewed #{key} at its current head; not starting it." if raw[:reviewed_at_head]
+
+      key = Transition.parse_target(raw[:pr]["url"]) || key
+      facts = build_facts(raw, false, manual: true)
+      message = locked do |state|
+        old = state["prs"][key]
+        next if old && !DONE_STATES.include?(old["state"])
+
+        now = Time.now.utc
+        entry = state["prs"][key] = Transition.adopt_manual(old, key, now)
+        refresh_entry(entry, raw, facts, nil)
+        enter_state(entry, entry["state"], Transition.arrival(facts), facts, now)
+        started = mark_start(entry)
+        spawn_and_render(state, now)
+        next "Started #{short_ref(entry)} (#{start_outcome(entry)})." if started
+
+        "#{short_ref(entry)} is #{entry["state"]}; only queued PRs can be started."
+      end
+      message || start_one(key).first
+    end
+
     def start_all
       @filters = filters
       locked do |state|
@@ -457,10 +517,14 @@ module ReviewDesk
       nil
     end
 
-    def live_refusal(entry, live)
-      reason = if live["state"] != "OPEN" then live["state"].downcase
-      elsif live["isDraft"] then "a draft"
+    def closed_reason(pr)
+      if pr["state"] != "OPEN" then pr["state"].downcase
+      elsif pr["isDraft"] then "a draft"
       end
+    end
+
+    def live_refusal(entry, live)
+      reason = closed_reason(live)
       return unless reason
 
       entry.delete("last_error")
@@ -472,7 +536,7 @@ module ReviewDesk
       arrivals = 0
       facts_by_key.each do |key, raw|
         entry = entries[key]
-        facts = build_facts(raw, candidates.include?(key))
+        facts = build_facts(raw, candidates.include?(key), manual: entry&.dig("manual"))
         verdict_ready = entry ? verdict_ready?(entry) : false
         tab_open = entry ? Transition.tab_open?(entry, live_surfaces) : true
         new_state = Transition.call(entry, facts, verdict_ready: verdict_ready, tab_open: tab_open)
@@ -526,10 +590,10 @@ module ReviewDesk
       )
     end
 
-    def build_facts(raw, in_search)
+    def build_facts(raw, in_search, manual: false)
       pr = raw[:pr]
       counted = teams_filter.empty? || raw[:direct] || raw[:teams].intersect?(teams_filter)
-      requested = in_search && !pr["isDraft"] && counted
+      requested = Transition.requested?(in_search: in_search, manual: manual, draft: pr["isDraft"], counted: counted)
       Facts.new(
         open: pr["state"] == "OPEN",
         requested: requested,
@@ -1063,7 +1127,9 @@ module ReviewDesk
       parts = []
       parts << "**direct**" if entry["direct"]
       parts.concat(entry["teams"].to_a)
-      parts.empty? ? "?" : parts.join(", ")
+      return parts.join(", ") if parts.any?
+
+      entry["manual"] ? "you (manual)" : "?"
     end
 
     def base_cell(entry)
@@ -1206,7 +1272,7 @@ if __FILE__ == $PROGRAM_NAME
   when "watch" then desk.watch(options[:interval], port: options[:port] || ReviewDesk::DEFAULT_PORT)
   when "tick" then desk.tick
   when "start"
-    abort "start needs a PR reference or --all" if ARGV.empty? && !options[:all]
+    abort "start needs a PR reference, a PR URL, or --all" if ARGV.empty? && !options[:all]
     desk.start(ARGV, all: options[:all] || false)
   when "prepare"
     abort "prepare needs an owner/repo#n key" if ARGV.empty?
