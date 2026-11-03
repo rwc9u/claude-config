@@ -144,6 +144,24 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "verdict-ready", Transition.call(entry("reviewing"), facts, verdict_ready: true, tab_open: false)
   end
 
+  def test_artifact_url_reads_claude_link
+    lines = ["verdict: Approve\n", "artifact: https://claude.ai/artifact/KpZ3BMaut7iYpHv34Xjpe8\n"]
+
+    assert_equal "https://claude.ai/artifact/KpZ3BMaut7iYpHv34Xjpe8", Transition.artifact_url(lines)
+  end
+
+  def test_artifact_url_rejects_other_hosts
+    assert_nil Transition.artifact_url(["artifact: https://evil.example/x\n"])
+  end
+
+  def test_artifact_url_rejects_markdown_injection
+    assert_nil Transition.artifact_url(["artifact: https://claude.ai/a) [x](javascript:alert(1)\n"])
+  end
+
+  def test_artifact_url_is_nil_without_line
+    assert_nil Transition.artifact_url(["verdict: Approve\n"])
+  end
+
   def test_reviewing_with_open_tab_survives_teammate_review
     assert_equal "reviewing",
                  Transition.call(entry("reviewing"), facts(requested: false, taken_by: "djkajabi (approved)"))

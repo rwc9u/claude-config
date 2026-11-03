@@ -201,6 +201,12 @@ module ReviewDesk
       facts.checkout ? "queued" : "no-checkout"
     end
 
+    # Only claude.ai links render: the verdict file is model-written and lands in the dashboard as markdown.
+    def artifact_url(lines)
+      url = lines.grep(/\Aartifact:/).first&.split(":", 2)&.last&.strip
+      url if url&.match?(%r{\Ahttps://claude\.ai/[\w/-]+\z})
+    end
+
     def withdrawn(facts)
       facts.taken_by ? "taken" : "dropped"
     end
@@ -773,6 +779,12 @@ module ReviewDesk
       nil
     end
 
+    def verdict_artifact(entry)
+      Transition.artifact_url(File.foreach(verdict_path(entry)).first(5))
+    rescue Errno::ENOENT
+      nil
+    end
+
     def retire_verdict(entry)
       path = verdict_path(entry)
       return unless File.exist?(path)
@@ -1135,6 +1147,8 @@ module ReviewDesk
       parts = []
       path = verdict_path(entry)
       parts << "[#{verdict_label(entry) || "verdict"}](file://#{path})" if File.exist?(path)
+      artifact = verdict_artifact(entry)
+      parts << "[explainer](#{artifact})" if artifact
       parts << "[stale](file://#{entry["stale_verdict"]})" if entry["stale_verdict"]
       parts.empty? ? "—" : parts.join(" · ")
     end
@@ -1142,7 +1156,9 @@ module ReviewDesk
     def outcome_cell(entry)
       case entry["state"]
       when "taken" then "taken by #{entry["taken_by"]}"
-      when "filed" then "filed"
+      when "filed"
+        artifact = verdict_artifact(entry)
+        artifact ? "filed · [explainer](#{artifact})" : "filed"
       else "dropped"
       end
     end
