@@ -35,6 +35,7 @@ module ReviewDesk
   CONFIG_PATH = File.join(STATE_DIR, "config.json")
   VERDICT_DIR = File.join(STATE_DIR, "verdicts")
   REPO_LOCK_DIR = File.join(STATE_DIR, "locks")
+  TIMING_LOG = File.join(STATE_DIR, "timing.log")
   PREPARE_ERROR = "worktree creation failed; see its tab"
   TAB_CLOSED_ERROR = "review tab closed before a verdict"
   MIGRATION_TEAM = "db-migration-reviewers"
@@ -420,7 +421,7 @@ module ReviewDesk
       FileUtils.mkdir_p(REPO_LOCK_DIR)
       created = File.open(Transition.repo_lock_path(repo), File::RDWR | File::CREAT) do |lock|
         lock.flock(File::LOCK_EX)
-        system("wt", "-C", checkout_dir(repo), "switch", "pr:#{number}", "--no-cd")
+        timed("prepare #{key}") { system("wt", "-C", checkout_dir(repo), "switch", "pr:#{number}", "--no-cd") }
       end
       return true if created
 
@@ -455,8 +456,10 @@ module ReviewDesk
     # Returns [message, pr_url]. The PR check runs before the lock so a slow gh call never blocks a tick.
     def start_one(key)
       @filters = filters
-      live = check_pr(key) if load_state["prs"].dig(key, "state") == "queued"
+      live = timed("  check_pr #{key}") { check_pr(key) } if load_state["prs"].dig(key, "state") == "queued"
+      waiting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       locked do |state|
+        log_timing("  lock wait", Process.clock_gettime(Process::CLOCK_MONOTONIC) - waiting)
         entry = state["prs"][key]
         next ["Not tracking #{key}.", nil] unless entry
 
@@ -471,7 +474,7 @@ module ReviewDesk
           next ["#{short_ref(entry)} is #{entry["state"]}; only queued PRs can be started.", entry["url"]]
         end
 
-        spawn_and_render(state, Time.now.utc)
+        timed("  spawn+render") { spawn_and_render(state, Time.now.utc) }
         ["Started #{short_ref(entry)} (#{start_outcome(entry)}).", entry["url"]]
       end
     end
@@ -834,14 +837,27 @@ module ReviewDesk
 
     def review_command(entry)
       prompt = Transition.review_prompt(entry)
-      run = if worktree_exists?(entry)
-        "-x sh -- -c #{sh_quote("git pull --ff-only && exec claude #{sh_quote(prompt)}")}"
-      else
-        "-x claude -- #{sh_quote(prompt)}"
-      end
+      pull = worktree_exists?(entry) ? "git pull --ff-only && " : ""
+      stamp = "printf '%s launch %s\\n' \"$(date +%T)\" #{sh_quote(entry["key"])} >> #{sh_quote(TIMING_LOG)}; "
+      run = "-x sh -- -c #{sh_quote("#{pull}#{stamp}exec claude #{sh_quote(prompt)}")}"
       "#{sh_quote(RbConfig.ruby)} #{sh_quote(SCRIPT_PATH)} prepare #{sh_quote(entry["key"])} && " \
         "cd #{sh_quote(checkout_dir(entry["repo"]))} && REVIEW_DESK_DIR=#{sh_quote(VERDICT_DIR)} " \
         "wt switch pr:#{entry["number"]} #{run}"
+    end
+
+    def timed(label)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      yield
+    ensure
+      log_timing(label, Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
+    end
+
+    def log_timing(label, seconds)
+      line = format("%s %s %.2fs", Time.now.strftime("%T"), label, seconds)
+      puts line
+      File.open(TIMING_LOG, "a") { |f| f.puts(line) }
+    rescue SystemCallError
+      nil
     end
 
     def worktree_exists?(entry)
@@ -982,7 +998,8 @@ module ReviewDesk
 
     def handle_request(client)
       request_line = Timeout.timeout(REQUEST_TIMEOUT) { read_head(client) }
-      status, body = respond(Http.route(request_line, @token))
+      route = Http.route(request_line, @token)
+      status, body = timed("http #{route.join(" ")}") { respond(route) }
       client.write("HTTP/1.1 #{status}\r\nContent-Type: text/html; charset=utf-8\r\n" \
                    "Content-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
     rescue Timeout::Error
