@@ -904,7 +904,8 @@ module ReviewDesk
         cmux("close-surface", "--surface", state["prs"][key]["surface"], "--workspace", workspace, "--force")
       end
       entries.each do |e|
-        e.delete("surface") if e["state"] == "filed" || (DONE_STATES.include?(e["state"]) && !live.include?(e["surface"]))
+        gone = DONE_STATES.include?(e["state"]) && !live.include?(e["surface"])
+        e.delete("surface") if e["state"] == "filed" || gone
       end
     end
 
