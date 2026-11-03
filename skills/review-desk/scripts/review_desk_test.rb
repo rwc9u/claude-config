@@ -481,6 +481,51 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal [:bad_request], ReviewDesk::Http.route("\x16\x03\x01", TOKEN)
   end
 
+  def rack_env(path, query)
+    { "REQUEST_METHOD" => "GET", "PATH_INFO" => path, "QUERY_STRING" => query }
+  end
+
+  def quiet_desk
+    ReviewDesk::Desk.new(username: "rwc9u").tap { |desk| desk.define_singleton_method(:log_timing) { |*| nil } }
+  end
+
+  def test_request_line_joins_path_and_query
+    assert_equal "GET /max-age/7?t=#{TOKEN} HTTP/1.1",
+                 ReviewDesk::Http.request_line(rack_env("/max-age/7", "t=#{TOKEN}"))
+  end
+
+  def test_request_line_without_query_has_no_question_mark
+    assert_equal "GET /refresh HTTP/1.1", ReviewDesk::Http.request_line(rack_env("/refresh", ""))
+  end
+
+  def test_rack_app_wrong_token_is_forbidden_html
+    jobs = []
+    status, headers, body = quiet_desk.send(:rack_app, TOKEN, jobs.method(:push))
+                                      .call(rack_env("/refresh", "t=nope0000"))
+
+    assert_equal 403, status
+    assert_equal({ "content-type" => "text/html; charset=utf-8" }, headers)
+    assert_includes body.join, "Missing or wrong token."
+    assert_empty jobs
+  end
+
+  def test_rack_app_unknown_path_is_not_found
+    status, _, body = quiet_desk.send(:rack_app, TOKEN, ->(_job) {}).call(rack_env("/nope", "t=#{TOKEN}"))
+
+    assert_equal 404, status
+    assert_includes body.join, "Unknown path."
+  end
+
+  def test_rack_app_ack_route_answers_at_once_and_hands_off_its_work
+    jobs = []
+    status, _, body = quiet_desk.send(:rack_app, TOKEN, jobs.method(:push)).call(rack_env("/refresh", "t=#{TOKEN}"))
+
+    assert_equal 200, status
+    assert_includes body.join, "Refreshing from GitHub; the dashboard updates in a few seconds."
+    assert_equal 1, jobs.size
+    assert_respond_to jobs.first, :call
+  end
+
   LISTENER = { "port" => 47_321, "token" => TOKEN }.freeze
 
   def link(path)

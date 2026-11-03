@@ -131,6 +131,8 @@ with `app/`.
 
 ## Requirements
 
-- Ruby (standard library only), `gh` authenticated with `read:org` for team
-  lookups, `wt` (worktrunk), and cmux for the workspace (the script skips cmux
-  calls when `CMUX_SOCKET_PATH` is unset).
+- Ruby; `watch` needs the gems in `scripts/Gemfile` (run `bundle install` there
+  once); every other command is standard library only. `gh` authenticated with
+  `read:org` for team lookups, `wt` (worktrunk), and cmux for the workspace (the
+  script skips cmux calls when `CMUX_SOCKET_PATH` is unset).
+- The dashboard listener is Falcon (Async fibers), started by `watch`.
