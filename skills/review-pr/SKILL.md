@@ -62,17 +62,36 @@ Weigh each finding as a reviewer, not an author:
 - Conclude with exactly one recommendation: **Approve**, **Approve with
   comments**, or **Request changes**, plus one or two sentences of rationale
 
-### 4. Report to the user
+### 4. Publish a PR explainer
 
-Present the verdict first, then blocking items, then non-blocking items.
-Keep it tight — this is for the human reviewer to act on.
+Publish an Artifact that explains the PR to someone who hasn't opened it, and
+reference it from the verdict. Follow the Artifact tool's own flow (quickstart
+with intent `other`), and load `artifact-diagramming` for the visual.
+
+- **Why**: the problem the PR solves, in two or three sentences
+- **What changed**: grouped by area, each as before → after, naming the key
+  files; skip lockfiles and generated files
+- **Visual**: one diagram of the real mechanism the PR touches, such as the
+  data flow, request sequence, schema change, state machine, or a before/after
+  comparison; never a decorative chart
+- **Verdict**: the recommendation, blocking items, and risks to watch
+- Title `<repo>#<n>: <short topic>`; leave out secrets, tokens, and customer data
+- On a re-review, if an earlier verdict file for this PR (including a stale
+  `<owner>-<repo>-<number>-<sha>.md`) has an `artifact:` line, read that
+  artifact and publish to its URL instead of creating a new one
+
+### 5. Report to the user
+
+Present the verdict first, then the explainer link, then blocking items, then
+non-blocking items. Keep it tight — this is for the human reviewer to act on.
 
 When `REVIEW_DESK_DIR` is set, also write the report to
 `$REVIEW_DESK_DIR/<owner>-<repo>-<number>.md` (create the directory if needed).
 Line 1 is `verdict: <Approve|Approve with comments|Request changes>`, line 2 is
-`head: <full 40-character head SHA reviewed>`, then the report.
+`head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
+URL>`, then the report.
 
-### 5. File the review
+### 6. File the review
 
 Only after explicit confirmation (or when `--file` was passed):
 

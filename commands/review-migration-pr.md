@@ -151,12 +151,20 @@ Format your review as:
 [Explanation of recommendation]
 ```
 
-### 10. Record the Verdict for the Review Desk
+### 10. Publish a PR Explainer
+
+Publish the explainer Artifact described in step 4 of the `review-pr` skill
+(`~/.claude/skills/review-pr/SKILL.md`), and link it at the top of the review
+summary. For a migration, the visual should show the schema before → after
+(tables, columns, indexes, constraints) and the deploy order when it matters.
+
+### 11. Record the Verdict for the Review Desk
 
 When `REVIEW_DESK_DIR` is set, also write the review summary to
 `$REVIEW_DESK_DIR/<owner>-<repo>-<number>.md` (create the directory if needed).
 Line 1 is `verdict: <Approve|Request changes|Needs discussion>`, line 2 is
-`head: <full 40-character head SHA reviewed>`, then the summary. Do not file a
+`head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
+URL>`, then the summary. Do not file a
 review on GitHub unless the user asks. After filing one, run
 `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb tick >/dev/null 2>&1 &`
 as the last step and say the tab will close; the desk closes it within seconds.
