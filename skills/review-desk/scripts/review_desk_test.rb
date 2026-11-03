@@ -423,6 +423,20 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal [:refresh], ReviewDesk::Http.route("GET /refresh?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
   end
 
+  def test_start_acks_with_pr_link
+    assert_equal ["Starting kajabi-products#60090; its review tab opens in a moment.",
+                  "https://github.com/Kajabi/kajabi-products/pull/60090"],
+                 ReviewDesk::Http.ack([:start, "Kajabi/kajabi-products#60090"])
+  end
+
+  def test_refresh_acks_without_link
+    assert_nil ReviewDesk::Http.ack([:refresh]).last
+  end
+
+  def test_filter_routes_answer_synchronously
+    assert_nil ReviewDesk::Http.ack([:bots, true])
+  end
+
   def test_bots_on_routes_to_show_bots
     assert_equal [:bots, true], ReviewDesk::Http.route("GET /bots/on?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
   end

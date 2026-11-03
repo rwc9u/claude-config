@@ -238,6 +238,18 @@ module ReviewDesk
       end
     end
 
+    # The immediate page for routes whose work runs after the response; nil means answer synchronously.
+    def ack(route)
+      case route.first
+      when :start
+        repo, number = route.last.split("#")
+        ["Starting #{repo.split("/").last}##{number}; its review tab opens in a moment.",
+         "https://github.com/#{repo}/pull/#{number}"]
+      when :start_all then ["Starting every queued PR; the dashboard updates in a moment.", nil]
+      when :refresh then ["Refreshing from GitHub; the dashboard updates in a few seconds.", nil]
+      end
+    end
+
     def url(info, path)
       "http://127.0.0.1:#{info["port"]}#{path}?t=#{info["token"]}"
     end
@@ -986,24 +998,36 @@ module ReviewDesk
     def serve(server)
       loop do
         client = server.accept
+        job = nil
         begin
-          handle_request(client)
+          job = handle_request(client)
         rescue StandardError => e
           warn "listener: #{e.class}: #{e.message}"
         ensure
           client.close
         end
+        Thread.new { run_job(job) } if job
       end
     end
 
+    # Slow routes answer at once and do their work after the connection closes; returns that work.
     def handle_request(client)
       request_line = Timeout.timeout(REQUEST_TIMEOUT) { read_head(client) }
       route = Http.route(request_line, @token)
-      status, body = timed("http #{route.join(" ")}") { respond(route) }
+      label = "http #{route.join(" ")}"
+      ack = Http.ack(route)
+      status, body = ack ? ["200 OK", html_page(*ack)] : timed(label) { respond(route) }
       client.write("HTTP/1.1 #{status}\r\nContent-Type: text/html; charset=utf-8\r\n" \
                    "Content-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+      -> { timed(label) { respond(route) } } if ack
     rescue Timeout::Error
       nil
+    end
+
+    def run_job(job)
+      job.call
+    rescue StandardError => e
+      warn "listener: #{e.class}: #{e.message}"
     end
 
     # Headers are read and discarded so the browser sees a clean response; bodies are never read.
