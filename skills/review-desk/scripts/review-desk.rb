@@ -81,9 +81,9 @@ module ReviewDesk
         facts.requested && facts.head_sha != entry["review_head"] ? "queued" : state
       when "reviewing"
         return "verdict-ready" if verdict_ready
-        return withdrawn(facts) unless facts.requested
+        return state if tab_open
 
-        tab_open ? state : "queued"
+        facts.requested ? "queued" : withdrawn(facts)
       when "queued", "start-requested"
         facts.requested ? state : withdrawn(facts)
       when "no-checkout"
@@ -670,7 +670,9 @@ module ReviewDesk
     end
 
     def fetch_facts(candidates, entries)
-      keys = (candidates.keys + entries.select { |_, e| ACTIVE_STATES.include?(e["state"]) }.keys).uniq
+      # An open tab keeps a done PR fetched, so filing from it is still seen.
+      tracked = entries.select { |_, e| ACTIVE_STATES.include?(e["state"]) || e["surface"] }.keys
+      keys = (candidates.keys + tracked).uniq
       keys.each_slice(GRAPHQL_CHUNK).each_with_object({}) do |chunk, facts|
         facts.merge!(fetch_chunk(chunk))
       end
@@ -901,7 +903,9 @@ module ReviewDesk
       Transition.tabs_to_close(entries, live).each do |key|
         cmux("close-surface", "--surface", state["prs"][key]["surface"], "--workspace", workspace, "--force")
       end
-      entries.each { |e| e.delete("surface") if e["state"] == "filed" }
+      entries.each do |e|
+        e.delete("surface") if e["state"] == "filed" || (DONE_STATES.include?(e["state"]) && !live.include?(e["surface"]))
+      end
     end
 
     def pane_exists?(workspace, pane)

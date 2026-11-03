@@ -144,6 +144,15 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "verdict-ready", Transition.call(entry("reviewing"), facts, verdict_ready: true, tab_open: false)
   end
 
+  def test_reviewing_with_open_tab_survives_teammate_review
+    assert_equal "reviewing",
+                 Transition.call(entry("reviewing"), facts(requested: false, taken_by: "djkajabi (approved)"))
+  end
+
+  def test_taken_pr_filed_from_its_tab_is_filed
+    assert_equal "filed", Transition.call(entry("taken"), facts(requested: false, reviewed_at_head: true))
+  end
+
   def test_reviewing_with_closed_tab_and_withdrawn_request_is_dropped
     assert_equal "dropped", Transition.call(entry("reviewing"), facts(requested: false), tab_open: false)
   end
