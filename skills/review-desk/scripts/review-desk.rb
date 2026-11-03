@@ -107,7 +107,7 @@ module ReviewDesk
       base.except("taken_by", "last_error").merge("manual" => true)
     end
 
-    PR_URL = %r{\Ahttps?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/pull/(\d+)(?:/files|/commits)?/?(?:[?#].*)?\z}
+    PR_URL = %r{\Ahttps?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/pull/(\d+)(?:/[^?#]*)?(?:[?#].*)?\z}
 
     def parse_target(str)
       match = PR_URL.match(str.to_s.strip) or return

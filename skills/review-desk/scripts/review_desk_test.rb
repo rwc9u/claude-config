@@ -228,6 +228,11 @@ class ReviewDeskTransitionTest < Minitest::Test
                  Transition.parse_target("https://github.com/Kajabi/kajabi-products/pull/60275/files")
   end
 
+  def test_parse_target_reads_changes_tab_diff_link
+    assert_equal "Kajabi/kajabi-products#60444",
+                 Transition.parse_target("https://github.com/Kajabi/kajabi-products/pull/60444/changes#diff-78a8a1R607")
+  end
+
   def test_parse_target_ignores_query
     assert_equal "Kajabi/kajabi-products#60275",
                  Transition.parse_target("https://github.com/Kajabi/kajabi-products/pull/60275?w=1")
