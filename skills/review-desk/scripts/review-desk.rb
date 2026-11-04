@@ -1075,7 +1075,18 @@ module ReviewDesk
       Sync do |root|
         spawn = ->(job) { root.async { run_job(job) } }
         app = Falcon::Server.rack_middleware(rack_app(@token, spawn), cache: false)
-        Falcon::Server.new(app, bound, protocol: endpoint.protocol, scheme: endpoint.scheme).run.wait
+        server = Falcon::Server.new(app, bound, protocol: endpoint.protocol, scheme: endpoint.scheme)
+        server.singleton_class.prepend(QuietResets)
+        server.run.wait
+      end
+    end
+
+    # Browsers reset the idle connections they open speculatively; that isn't worth a stack trace per click.
+    module QuietResets
+      def accept(...)
+        super
+      rescue Errno::ECONNRESET, Errno::EPIPE
+        nil
       end
     end
 

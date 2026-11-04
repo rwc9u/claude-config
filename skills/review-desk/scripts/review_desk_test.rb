@@ -559,6 +559,20 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_empty jobs
   end
 
+  def resetting_server(error)
+    server = Class.new { define_method(:accept) { |*| raise error } }.new
+    server.singleton_class.prepend(ReviewDesk::Desk::QuietResets)
+    server
+  end
+
+  def test_quiet_resets_swallows_a_peer_reset
+    assert_nil resetting_server(Errno::ECONNRESET).accept(:peer, :address)
+  end
+
+  def test_quiet_resets_still_raises_other_errors
+    assert_raises(ArgumentError) { resetting_server(ArgumentError).accept(:peer, :address) }
+  end
+
   def test_html_page_has_header_and_escaped_pr_button
     page = quiet_desk.send(:html_page, "Starting <x>", "https://github.com/a/b/pull/1?x=1&y=2")
 
