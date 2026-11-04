@@ -95,11 +95,17 @@ URL>`, then the report.
 
 Only after explicit confirmation (or when `--file` was passed):
 
-- Use `gh pr review <number> --approve` or `--request-changes` (or
-  `--comment` for "approve with comments" when approval isn't yours to give)
-- Start the body with `> 🤖 Posted by Claude on behalf of Rob.` followed by a blank line
-- Body = the verdict rationale plus blocking items; leave non-blocking items
-  out unless the user wants them included
+- **Approve**: `gh pr review <number> --approve` with no body — never add the
+  verdict rationale to an approval
+- **Approve with comments**: one approving review whose non-blocking items are
+  inline comments on their lines, still with no review body:
+  `gh api repos/<owner>/<repo>/pulls/<number>/reviews -f event=APPROVE` plus a
+  `comments[]` entry (`path`, `line`, `body`) per item. Start each comment body
+  with `> 🤖 Posted by Claude on behalf of Rob.` and a blank line. Use
+  `event=COMMENT` instead when approval isn't yours to give
+- **Request changes**: `gh pr review <number> --request-changes` with a body
+  of the blocking items, starting with `> 🤖 Posted by Claude on behalf of Rob.`
+  and a blank line; leave non-blocking items out unless the user wants them
 - Never file a review without the user's go-ahead in this session unless
   `--file` was explicitly passed
 - When `REVIEW_DESK_DIR` is set, after filing run
