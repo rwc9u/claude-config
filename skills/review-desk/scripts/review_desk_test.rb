@@ -509,6 +509,10 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_empty jobs
   end
 
+  def test_html_page_declares_an_empty_icon
+    assert_includes quiet_desk.send(:html_page, "Done.", nil), %(<link rel="icon" href="data:,">)
+  end
+
   def test_rack_app_unknown_path_is_not_found
     status, _, body = quiet_desk.send(:rack_app, TOKEN, ->(_job) {}).call(rack_env("/nope", "t=#{TOKEN}"))
 

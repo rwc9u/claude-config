@@ -1080,7 +1080,8 @@ module ReviewDesk
 
     def html_page(message, url)
       link = url ? %(<p><a href="#{ERB::Util.html_escape(url)}">Open the PR</a></p>) : ""
-      "<!doctype html><title>Review desk</title><p>#{ERB::Util.html_escape(message)}</p>#{link}\n"
+      # The empty icon stops the browser's tokenless /favicon.ico fetch, which would log a 403 on every click.
+      "<!doctype html><title>Review desk</title><link rel=\"icon\" href=\"data:,\"><p>#{ERB::Util.html_escape(message)}</p>#{link}\n"
     end
 
     def listener(state)
