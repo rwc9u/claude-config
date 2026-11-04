@@ -5,16 +5,16 @@
 # review-desk.rb — Track PRs awaiting your review and run /review-pr sessions in a cmux "Reviews" workspace
 #
 # Usage:
-#   ruby review-desk.rb watch [--interval 300] [--max-concurrent 3] [--team SLUG]...
-#   ruby review-desk.rb tick [--dry-run] [--team SLUG]...
-#   ruby review-desk.rb start <owner/repo#n | repo#n | n | PR URL> | --all
-#   ruby review-desk.rb dismiss|undismiss <owner/repo#n | repo#n | n | PR URL>
-#   ruby review-desk.rb prepare <owner/repo#n>
-#   ruby review-desk.rb prune [--yes]
-#   ruby review-desk.rb bots on|off|status
-#   ruby review-desk.rb max-age <days>|off|status
+#   review-desk.sh watch [--interval 300] [--max-concurrent 3] [--team SLUG]...
+#   review-desk.sh tick [--dry-run] [--team SLUG]...
+#   review-desk.sh start <owner/repo#n | repo#n | n | PR URL> | --all
+#   review-desk.sh dismiss|undismiss <owner/repo#n | repo#n | n | PR URL>
+#   review-desk.sh prepare <owner/repo#n>
+#   review-desk.sh prune [--yes]
+#   review-desk.sh bots on|off|status
+#   review-desk.sh max-age <days>|off|status
 #
-# Requires: gh (GitHub CLI) authenticated, wt (worktrunk), cmux (optional); watch also needs scripts/Gemfile
+# Requires: gh (GitHub CLI) authenticated, wt (worktrunk), cmux (optional); review-desk.sh installs watch's gems
 
 require "json"
 require "open3"
@@ -40,6 +40,7 @@ module ReviewDesk
   MIGRATION_TEAM = "db-migration-reviewers"
   CHECKOUT_ROOT = File.expand_path("~/dev")
   SCRIPT_PATH = File.expand_path("~/.claude/skills/review-desk/scripts/review-desk.rb")
+  WRAPPER_PATH = File.join(File.dirname(SCRIPT_PATH), "review-desk.sh")
   RETENTION_SECONDS = 24 * 3600
   DEFAULT_PORT = 47_321
 
@@ -1058,8 +1059,8 @@ module ReviewDesk
       require "async"
       require "async/http/endpoint"
     rescue Bundler::GemNotFound, Gem::LoadError => e
-      abort "#{e.message}\nwatch needs the listener's gems: run `bundle install` (or `bundle update json` " \
-            "after a gem upgrade) in #{__dir__}."
+      abort "#{e.message}\nStart watch with #{WRAPPER_PATH}, which installs the listener's gems " \
+            "(after a gem upgrade, run `bundle update json` in #{__dir__})."
     end
 
     # Binds before the first tick so a taken port aborts at once; CLOEXEC keeps the socket out of gh/cmux children.
@@ -1227,7 +1228,7 @@ module ReviewDesk
       recent = recent_rows(entries, now)
       lines.concat(render_table("Recently filed, taken, dropped, or dismissed", recent, :outcome, now))
       unless @listener_info
-        lines << "Start one: `ruby #{SCRIPT_PATH} start <repo>#<n>` · all queued: `... start --all`"
+        lines << "Start one: `#{WRAPPER_PATH} start <repo>#<n>` · all queued: `... start --all`"
       end
       atomic_write(QUEUE_PATH, lines.join("\n") + "\n")
     end

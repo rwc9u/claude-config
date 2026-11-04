@@ -166,11 +166,11 @@ Line 1 is `verdict: <Approve|Request changes|Needs discussion>`, line 2 is
 `head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
 URL>`, then the summary. Do not file a
 review on GitHub unless the user asks. After filing one, run
-`nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb tick >/dev/null 2>&1 &`
+`nohup ~/.claude/skills/review-desk/scripts/review-desk.sh tick >/dev/null 2>&1 &`
 as the last step and say the tab will close; the desk closes it within seconds.
 If the user says to ignore, dismiss, or skip the PR instead of filing, don't
 write an "Ignore" verdict; run
-`nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb dismiss <owner/repo#n> >/dev/null 2>&1 &`
+`nohup ~/.claude/skills/review-desk/scripts/review-desk.sh dismiss <owner/repo#n> >/dev/null 2>&1 &`
 as the last step and say the tab will close.
 
 ## Important Notes

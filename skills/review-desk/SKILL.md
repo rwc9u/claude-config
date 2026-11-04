@@ -14,7 +14,7 @@ own: the user picks which PRs to start, and each one opens a tab running
 `db-migration-reviewers` gets `/review-migration-pr <n> --desk` instead.
 
 ```bash
-DESK="ruby ${SKILL_DIR}/scripts/review-desk.rb"
+DESK="${SKILL_DIR}/scripts/review-desk.sh"
 ```
 
 ## Start the desk
@@ -26,7 +26,7 @@ DESK="ruby ${SKILL_DIR}/scripts/review-desk.rb"
 3. If there is no Reviews workspace, create it with the watcher as its first terminal:
    ```bash
    cmux new-workspace --name Reviews --cwd ~/dev --focus false \
-     --command "ruby ${SKILL_DIR}/scripts/review-desk.rb watch"
+     --command "${SKILL_DIR}/scripts/review-desk.sh watch"
    ```
    It prints `OK workspace:<n>` (this verb ignores `--json`). If the workspace
    exists, start the watcher only when `pgrep -f 'review-desk.rb watch'` finds
@@ -150,8 +150,9 @@ with `app/`.
 
 ## Requirements
 
-- Ruby; `watch` needs the gems in `scripts/Gemfile` (run `bundle install` there
-  once); every other command is standard library only. `gh` authenticated with
+- Ruby; run every command through `scripts/review-desk.sh`, which installs the
+  gems in `scripts/Gemfile` that `watch` needs for the active Ruby. Every other
+  command is standard library only. `gh` authenticated with
   `read:org` for team lookups, `wt` (worktrunk), and cmux for the workspace (the
   script skips cmux calls when `CMUX_SOCKET_PATH` is unset).
 - The dashboard listener is Falcon (Async fibers), started by `watch`.
