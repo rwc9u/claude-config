@@ -179,6 +179,11 @@ Each test event from Datadog contains rich metadata. Key fields to examine:
 - A test that exceeds the timeout gets killed with SIGHUP and marked as `skip`
 - The same test may be requeued to another worker (up to `--max-requeues`)
 - So the same spec can appear multiple times in one pipeline — some passing, some skipped
+- **A spec that "passes" in CI but fails every time locally may be a false green.** If the run's logs show `CI::Queue::Redis::ReservationError` or `exit code for worker N: 1`, a retry layer (RSpec::Retry, Datadog Auto Test Retries) re-ran an example ci-queue had already finished, the worker crashed, and its failure was never reported. That's how ~75 failing examples sat green on main in Oct/Nov 2026 (fixed in #60444).
+
+**Changing ci-queue or Datadog CI config:** see `docs/development/ci.md` ("Changing ci-queue or Datadog CI configuration") in kajabi-products. Before merging, confirm the branch's spec jobs ran and passed, then push a temporary always-failing spec and confirm CI goes red before dropping it.
+
+**Specs that fail on every run (not flaky ones):** if a CI change exposes known failures you can't fix right away, restore the quarantine skip list with `git checkout 6a871763b26 -- spec/support/quarantine.rb spec/support_specs/quarantine_spec.rb`, list each example with its owner, and delete each entry in the PR that fixes it. Don't use it for flaky specs; ci-queue's requeue already absorbs those.
 
 ### Step 5: Dig Deeper with Traces (When Available)
 
