@@ -1,7 +1,7 @@
 ---
 name: review-desk
-description: This skill should be used when the user asks to "start my review desk", "review desk", "track my reviews", "review queue", "start review <n>", "review <PR link>", "start all reviews", "show/hide bot PRs", "only show PRs from the last week", or invokes /review-desk. It runs a cmux "Reviews" workspace that tracks every open PR awaiting the user's review (direct or team requests), shows a live dashboard, and starts a /review-pr session per PR on request.
-argument-hint: "[start <repo>#<n> | start <PR URL> | start --all | bots on|off | max-age <days>|off | tick | prune]"
+description: This skill should be used when the user asks to "start my review desk", "review desk", "track my reviews", "review queue", "start review <n>", "review <PR link>", "start all reviews", "show/hide bot PRs", "only show PRs from the last week", "dismiss <PR>", "ignore <PR>", "undismiss <PR>", or invokes /review-desk. It runs a cmux "Reviews" workspace that tracks every open PR awaiting the user's review (direct or team requests), shows a live dashboard, and starts a /review-pr session per PR on request.
+argument-hint: "[start <repo>#<n> | start <PR URL> | start --all | dismiss|undismiss <repo>#<n> | bots on|off | max-age <days>|off | tick | prune]"
 ---
 
 # Review Desk
@@ -69,6 +69,22 @@ same thing. They hit a listener on `127.0.0.1` that only accepts the random
 token generated when `watch` started, and they answer in about half a second.
 Without a running watcher, the dashboard shows the `start` commands instead.
 
+## Dismiss reviews
+
+When the user says "dismiss 60487", "ignore kajabi-products#60487", or
+"undismiss 60487", run:
+
+```bash
+$DESK dismiss kajabi-products#60487     # same reference forms as start
+$DESK undismiss kajabi-products#60487
+```
+
+`dismiss` works on any tracked PR that isn't already finished. It moves the PR
+to `dismissed`, updates the dashboard, and closes its review tab. `undismiss`
+puts it back in `queued`; the next tick rechecks it on GitHub. While `watch`
+runs, queued, starting, no-checkout, and verdict-ready rows have a **dismiss**
+link, and a recently dismissed row has an **undo** link.
+
 ## States
 
 `queued → start-requested → reviewing → verdict-ready → filed`, plus:
@@ -76,15 +92,18 @@ Without a running watcher, the dashboard shows the `start` commands instead.
 - `no-checkout` — no `~/dev/<repo>` clone, so no worktree can be made
 - `taken` — the team request cleared because a teammate reviewed (shows who)
 - `dropped` — closed, merged, draft again, or the request was withdrawn
+- `dismissed` — the user skipped it; new pushes and requests leave it there
+  until `undismiss`, but closing or merging still drops it
 
 A new head SHA on a `verdict-ready` or `filed` PR that is still requested sends
-it back to `queued`; the old verdict is kept as a stale link. Worktree creation
+it back to `queued`; the old verdict is kept as a stale link. A `verdict-ready`
+PR whose request is withdrawn becomes `taken` or `dropped`. Worktree creation
 is serialized per repo; if it fails, the PR goes back to `queued` with "last try
 failed" in its Start cell and can be started again. A `reviewing` PR whose tab
 is gone (closed, or cmux quit) before a verdict lands goes back to `queued` the
 same way on the next tick. The watcher
 notifies once per tick when PRs arrive, and notifies + flashes the tab when a
-verdict lands. When a PR reaches `filed`, the next tick closes its review tab;
+verdict lands. When a PR reaches `filed` or `dismissed`, the next tick closes its review tab;
 the worktree stays until `prune`.
 
 ## Filters
@@ -119,8 +138,8 @@ with `app/`.
 
 - `$DESK tick` — one pass. Add `--dry-run` to fetch and render `queue.md`
   without spawning, cmux calls, or saving state.
-- `$DESK prune` — print `wt remove` commands for worktrees of filed, taken, and
-  dropped PRs. Run them only with `--yes`, and only when the user asks.
+- `$DESK prune` — print `wt remove` commands for worktrees of filed, taken,
+  dropped, and dismissed PRs. Run them only with `--yes`, and only when the user asks.
 
 ## Files
 

@@ -105,3 +105,7 @@ Only after explicit confirmation (or when `--file` was passed):
 - When `REVIEW_DESK_DIR` is set, after filing run
   `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb tick >/dev/null 2>&1 &`
   as the last step and say the tab will close; the desk closes it within seconds
+- When `REVIEW_DESK_DIR` is set and the user says to ignore, dismiss, or skip
+  the PR instead of filing, don't write an "Ignore" verdict; run
+  `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb dismiss <owner/repo#n> >/dev/null 2>&1 &`
+  as the last step and say the tab will close

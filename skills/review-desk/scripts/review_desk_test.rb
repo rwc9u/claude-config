@@ -225,8 +225,33 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "queued", Transition.call(entry("filed"), facts(head_sha: "def"))
   end
 
-  def test_verdict_ready_survives_withdrawn_request
-    assert_equal "verdict-ready", Transition.call(entry("verdict-ready"), facts(requested: false))
+  def test_verdict_ready_with_withdrawn_request_is_dropped
+    assert_equal "dropped", Transition.call(entry("verdict-ready"), facts(requested: false))
+  end
+
+  def test_verdict_ready_with_withdrawn_request_after_teammate_review_is_taken
+    assert_equal "taken",
+                 Transition.call(entry("verdict-ready"), facts(requested: false, taken_by: "prsimp (approved)"))
+  end
+
+  def test_verdict_ready_still_requested_at_same_head_stays
+    assert_equal "verdict-ready", Transition.call(entry("verdict-ready"), facts)
+  end
+
+  def test_dismissed_stays_dismissed_on_new_head_while_requested
+    assert_equal "dismissed", Transition.call(entry("dismissed"), facts(head_sha: "def"))
+  end
+
+  def test_dismissed_stays_dismissed_when_reviewed_at_head
+    assert_equal "dismissed", Transition.call(entry("dismissed"), facts(reviewed_at_head: true))
+  end
+
+  def test_closed_dismissed_pr_is_dropped
+    assert_equal "dropped", Transition.call(entry("dismissed"), facts(open: false))
+  end
+
+  def test_dismissed_tab_still_open_is_closed
+    assert_equal ["Kajabi/repo#1"], Transition.tabs_to_close([entry("dismissed", surface: "surface:7")], ["surface:7"])
   end
 
   def test_closed_pr_is_dropped
@@ -407,6 +432,31 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal [:start, "Kajabi/kajabi-products#60090"], route
   end
 
+  def test_dismiss_path_with_token_routes_to_pr_key
+    route = ReviewDesk::Http.route("GET /dismiss/Kajabi/kajabi-products/60487?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+
+    assert_equal [:dismiss, "Kajabi/kajabi-products#60487"], route
+  end
+
+  def test_undismiss_path_with_token_routes_to_pr_key
+    route = ReviewDesk::Http.route("GET /undismiss/Kajabi/kajabi-products/60487?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
+
+    assert_equal [:undismiss, "Kajabi/kajabi-products#60487"], route
+  end
+
+  def test_dismiss_path_without_token_is_forbidden
+    assert_equal [:forbidden], ReviewDesk::Http.route("GET /dismiss/Kajabi/repo/1 HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_undismiss_path_without_token_is_forbidden
+    assert_equal [:forbidden], ReviewDesk::Http.route("GET /undismiss/Kajabi/repo/1 HTTP/1.1\r\n", TOKEN)
+  end
+
+  def test_dismiss_routes_answer_synchronously
+    assert_nil ReviewDesk::Http.ack([:dismiss, "Kajabi/kajabi-products#60487"])
+    assert_nil ReviewDesk::Http.ack([:undismiss, "Kajabi/kajabi-products#60487"])
+  end
+
   def test_start_all_with_token_routes_to_start_all
     assert_equal [:start_all], ReviewDesk::Http.route("GET /start-all?t=#{TOKEN} HTTP/1.1\r\n", TOKEN)
   end
@@ -509,6 +559,18 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_empty jobs
   end
 
+  def test_html_page_has_header_and_escaped_pr_button
+    page = quiet_desk.send(:html_page, "Starting <x>", "https://github.com/a/b/pull/1?x=1&y=2")
+
+    assert_includes page, "<h1>Review Desk</h1>"
+    assert_includes page, "<p>Starting &lt;x&gt;</p>"
+    assert_includes page, %(<a class="button" href="https://github.com/a/b/pull/1?x=1&amp;y=2">Open the PR</a>)
+  end
+
+  def test_html_page_without_url_has_no_button
+    refute_includes quiet_desk.send(:html_page, "Done.", nil), %(class="button")
+  end
+
   def test_html_page_declares_an_empty_icon
     assert_includes quiet_desk.send(:html_page, "Done.", nil), %(<link rel="icon" href="data:,">)
   end
@@ -580,5 +642,42 @@ class ReviewDeskTransitionTest < Minitest::Test
   def test_filter_line_without_listener_offers_hiding_shown_bots
     assert_equal "Hidden: none — hide: `review-desk.rb bots off`",
                  ReviewDesk::Dashboard.filter_line(filter_entries, NO_FILTERS, NOW, nil)
+  end
+
+  def dashboard_desk(listener)
+    ReviewDesk::Desk.new(username: "rwc9u").tap { |desk| desk.instance_variable_set(:@listener_info, listener) }
+  end
+
+  def row(state)
+    entry(state, repo: "Kajabi/repo", number: 1)
+  end
+
+  def test_queued_row_with_listener_links_dismiss
+    cell = dashboard_desk(LISTENER).send(:extra_cell, row("queued"), :start)
+
+    assert_equal "[start](#{link("/start/Kajabi/repo/1")}) · [dismiss](#{link("/dismiss/Kajabi/repo/1")})", cell
+  end
+
+  def test_queued_row_without_listener_has_no_dismiss
+    refute_includes dashboard_desk(nil).send(:extra_cell, row("queued"), :start), "dismiss"
+  end
+
+  def test_verdict_ready_row_with_listener_links_dismiss
+    cell = dashboard_desk(LISTENER).send(:extra_cell, row("verdict-ready"), :verdict)
+
+    assert cell.end_with?(" · [dismiss](#{link("/dismiss/Kajabi/repo/1")})"), cell
+  end
+
+  def test_verdict_ready_row_without_listener_has_no_dismiss
+    refute_includes dashboard_desk(nil).send(:extra_cell, row("verdict-ready"), :verdict), "dismiss"
+  end
+
+  def test_dismissed_outcome_with_listener_links_undo
+    assert_equal "dismissed · [undo](#{link("/undismiss/Kajabi/repo/1")})",
+                 dashboard_desk(LISTENER).send(:extra_cell, row("dismissed"), :outcome)
+  end
+
+  def test_dismissed_outcome_without_listener_is_plain
+    assert_equal "dismissed", dashboard_desk(nil).send(:extra_cell, row("dismissed"), :outcome)
   end
 end

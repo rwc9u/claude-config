@@ -168,6 +168,10 @@ URL>`, then the summary. Do not file a
 review on GitHub unless the user asks. After filing one, run
 `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb tick >/dev/null 2>&1 &`
 as the last step and say the tab will close; the desk closes it within seconds.
+If the user says to ignore, dismiss, or skip the PR instead of filing, don't
+write an "Ignore" verdict; run
+`nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb dismiss <owner/repo#n> >/dev/null 2>&1 &`
+as the last step and say the tab will close.
 
 ## Important Notes
 

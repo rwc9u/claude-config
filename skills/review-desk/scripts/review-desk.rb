@@ -8,6 +8,7 @@
 #   ruby review-desk.rb watch [--interval 300] [--max-concurrent 3] [--team SLUG]...
 #   ruby review-desk.rb tick [--dry-run] [--team SLUG]...
 #   ruby review-desk.rb start <owner/repo#n | repo#n | n | PR URL> | --all
+#   ruby review-desk.rb dismiss|undismiss <owner/repo#n | repo#n | n | PR URL>
 #   ruby review-desk.rb prepare <owner/repo#n>
 #   ruby review-desk.rb prune [--yes]
 #   ruby review-desk.rb bots on|off|status
@@ -43,7 +44,8 @@ module ReviewDesk
   DEFAULT_PORT = 47_321
 
   ACTIVE_STATES = %w[queued start-requested reviewing verdict-ready no-checkout].freeze
-  DONE_STATES = %w[filed dropped taken].freeze
+  DONE_STATES = %w[filed dropped taken dismissed].freeze
+  CLOSE_TAB_STATES = %w[filed dismissed].freeze
   FILTERABLE_STATES = %w[queued start-requested no-checkout].freeze
   DEFAULT_FILTERS = { "show_bots" => false, "max_age_days" => nil }.freeze
   LEGEND = {
@@ -54,6 +56,7 @@ module ReviewDesk
     "filed" => ["Filed", "your review is on GitHub; a new push sends it back to Queued"],
     "taken" => ["Taken", "a teammate reviewed it for the team"],
     "dropped" => ["Dropped", "closed, merged, back to draft, or request withdrawn"],
+    "dismissed" => ["Dismissed", "you skipped it; stays hidden through new pushes until undismissed"],
     "no-checkout" => ["No checkout", "no `~/dev/<repo>` clone, so it can't start"],
   }.freeze
 
@@ -69,11 +72,16 @@ module ReviewDesk
     def call(entry, facts, verdict_ready: false, tab_open: true)
       state = entry && entry["state"]
       return(state && "dropped") unless facts.open
+      return state if state == "dismissed"
       return "filed" if facts.reviewed_at_head && (state || facts.requested)
       return(facts.requested ? arrival(facts) : nil) if state.nil?
 
       case state
-      when "verdict-ready", "filed"
+      when "verdict-ready"
+        return withdrawn(facts) unless facts.requested
+
+        facts.head_sha != entry["review_head"] ? "queued" : state
+      when "filed"
         facts.requested && facts.head_sha != entry["review_head"] ? "queued" : state
       when "reviewing"
         return "verdict-ready" if verdict_ready
@@ -126,7 +134,9 @@ module ReviewDesk
     def tabs_to_close(entries, live_surfaces)
       return [] if live_surfaces.nil?
 
-      entries.select { |e| e["state"] == "filed" && live_surfaces.include?(e["surface"]) }.map { |e| e["key"] }
+      entries
+        .select { |e| CLOSE_TAB_STATES.include?(e["state"]) && live_surfaces.include?(e["surface"]) }
+        .map { |e| e["key"] }
     end
 
     # GitHub clears a review request once it's answered; keep who asked.
@@ -213,6 +223,7 @@ module ReviewDesk
     module_function
 
     START_PATH = %r{\A/start/([\w.-]+)/([\w.-]+)/(\d+)\z}
+    DISMISS_PATH = %r{\A/(dismiss|undismiss)/([\w.-]+)/([\w.-]+)/(\d+)\z}
     MAX_AGE_PATH = %r{\A/max-age/([1-9]\d*)\z}
 
     def route(request_line, token)
@@ -229,6 +240,9 @@ module ReviewDesk
       when "/max-age/off" then [:max_age, nil]
       when MAX_AGE_PATH then [:max_age, Regexp.last_match(1).to_i]
       when START_PATH then [:start, "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}##{Regexp.last_match(3)}"]
+      when DISMISS_PATH
+        match = Regexp.last_match
+        [match[1].to_sym, "#{match[2]}/#{match[3]}##{match[4]}"]
       else [:not_found]
       end
     end
@@ -380,12 +394,45 @@ module ReviewDesk
       snapshot = load_state["prs"]
       targets.each do |target|
         url_key = Transition.parse_target(target)
-        tracked = url_key ? snapshot.keys.find { |k| k.casecmp?(url_key) } : resolve(snapshot, target)
+        tracked = tracked_key(snapshot, target)
         if url_key && (!tracked || DONE_STATES.include?(snapshot.dig(tracked, "state")))
           puts start_manual(tracked || url_key)
         elsif tracked
           puts start_one(tracked).first
         end
+      end
+    end
+
+    # State is saved before the tab closes: dismiss may run from inside the tab it closes.
+    # An unknown tab listing keeps the surface so the next tick closes it.
+    def dismiss(target)
+      key = nil
+      snapshot = nil
+      message = locked do |state|
+        key = tracked_key(state["prs"], target)
+        entry = key && state["prs"][key]
+        next "#{target} isn't on the review desk; nothing to dismiss." unless entry
+        next "#{short_ref(entry)} is #{entry["state"]}; nothing to dismiss." if DONE_STATES.include?(entry["state"])
+
+        entry.merge!("state" => "dismissed", "state_changed_at" => Time.now.utc.iso8601)
+        rerender(state)
+        snapshot = state
+        "Dismissed #{short_ref(entry)}; the dashboard updated."
+      end
+      close_dismissed_tab(snapshot, key) if snapshot&.dig("prs", key, "surface")
+      message
+    end
+
+    def undismiss(target)
+      locked do |state|
+        key = tracked_key(state["prs"], target)
+        entry = key && state["prs"][key]
+        next "#{target} isn't on the review desk; nothing to undismiss." unless entry
+        next "#{short_ref(entry)} is #{entry["state"]}, not dismissed." unless entry["state"] == "dismissed"
+
+        entry.merge!("state" => "queued", "state_changed_at" => Time.now.utc.iso8601)
+        rerender(state)
+        "#{short_ref(entry)} restored to Queued; the dashboard updated."
       end
     end
 
@@ -650,6 +697,11 @@ module ReviewDesk
     def startable_keys(entries)
       now = Time.now.utc
       entries.select { |_, e| e["state"] == "queued" && Transition.visible?(e, filters, now) }.keys
+    end
+
+    def tracked_key(entries, target)
+      url_key = Transition.parse_target(target)
+      url_key ? entries.keys.find { |k| k.casecmp?(url_key) } : resolve(entries, target)
     end
 
     def resolve(entries, target)
@@ -935,7 +987,7 @@ module ReviewDesk
       end
     end
 
-    # A known listing (only possible when cmux is available) settles every filed tab: closed now, or already gone.
+    # A known listing (only when cmux is available) settles every filed or dismissed tab: closed now, or already gone.
     def close_filed_tabs(state, live)
       return if live.nil?
 
@@ -946,8 +998,16 @@ module ReviewDesk
       end
       entries.each do |e|
         gone = DONE_STATES.include?(e["state"]) && !live.include?(e["surface"])
-        e.delete("surface") if e["state"] == "filed" || gone
+        e.delete("surface") if CLOSE_TAB_STATES.include?(e["state"]) || gone
       end
+    end
+
+    def close_dismissed_tab(state, key)
+      live = live_surfaces(state) or return
+      surface = state["prs"][key]["surface"]
+      workspace = state["workspace_ref"]
+      cmux("close-surface", "--surface", surface, "--workspace", workspace, "--force") if live.include?(surface)
+      locked { |fresh| fresh["prs"][key].delete("surface") if fresh["prs"].dig(key, "state") == "dismissed" }
     end
 
     def pane_exists?(workspace, pane)
@@ -1040,6 +1100,8 @@ module ReviewDesk
     def respond(route)
       case route.first
       when :start then ["200 OK", html_page(*start_one(route.last))]
+      when :dismiss then ["200 OK", html_page(dismiss(route.last), nil)]
+      when :undismiss then ["200 OK", html_page(undismiss(route.last), nil)]
       when :start_all then ["200 OK", html_page(start_all, nil)]
       when :refresh then ["200 OK", html_page(refresh, nil)]
       when :bots then ["200 OK", html_page(show_bots(route.last), nil)]
@@ -1067,21 +1129,53 @@ module ReviewDesk
     # Hidden PRs stay tracked, so a filter click only re-renders cached state instead of fetching GitHub.
     def rerender_with_filters(changes)
       update_filters(changes)
-      locked do |state|
-        @filters = filters
-        render(state, Time.now.utc)
-        set_status(state)
-      end
+      locked { |state| rerender(state) }
+    end
+
+    def rerender(state)
+      @filters = filters
+      render(state, Time.now.utc)
+      set_status(state)
     end
 
     def start_outcome(entry)
       entry["state"] == "reviewing" ? "review tab opened" : "waiting for a free slot"
     end
 
+    # shadcn's dark zinc tokens, inlined so the page renders instantly and makes no outside requests.
+    PAGE_STYLE = <<~CSS
+      :root { color-scheme: dark; --bg: #09090b; --fg: #fafafa; --muted: #a1a1aa; --border: #27272a;
+              --card: #0c0c0f; --primary: #fafafa; --primary-fg: #18181b; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg);
+             color: var(--fg); font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+             -webkit-font-smoothing: antialiased; }
+      main { width: 100%; max-width: 28rem; }
+      header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+      .mark { width: 28px; height: 28px; border-radius: 6px; background: var(--primary); color: var(--primary-fg);
+              display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+      h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+      header p { margin: 0; color: var(--muted); font-size: 12px; }
+      .card { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 24px;
+              box-shadow: 0 1px 2px rgb(0 0 0 / 0.4); }
+      .card p { margin: 0; }
+      .button { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; margin-top: 20px;
+                border-radius: 8px; background: var(--primary); color: var(--primary-fg); font-weight: 500;
+                text-decoration: none; transition: opacity 0.15s; }
+      .button:hover { opacity: 0.9; }
+      .button:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; }
+    CSS
+
     def html_page(message, url)
-      link = url ? %(<p><a href="#{ERB::Util.html_escape(url)}">Open the PR</a></p>) : ""
+      link = url ? %(<a class="button" href="#{ERB::Util.html_escape(url)}">Open the PR</a>) : ""
       # The empty icon stops the browser's tokenless /favicon.ico fetch, which would log a 403 on every click.
-      "<!doctype html><title>Review desk</title><link rel=\"icon\" href=\"data:,\"><p>#{ERB::Util.html_escape(message)}</p>#{link}\n"
+      <<~HTML
+        <!doctype html><html lang="en"><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
+        <title>Review Desk</title><link rel="icon" href="data:,"><style>#{PAGE_STYLE}</style></head>
+        <body><main><header><div class="mark">R</div><div><h1>Review Desk</h1><p>Local review queue</p></div></header>
+        <div class="card"><p>#{ERB::Util.html_escape(message)}</p>#{link}</div></main></body></html>
+      HTML
     end
 
     def listener(state)
@@ -1120,7 +1214,7 @@ module ReviewDesk
         lines.concat(render_table(title, rows, extra, now))
       end
       recent = entries.select { |e| DONE_STATES.include?(e["state"]) && recent?(e, now) }
-      lines.concat(render_table("Recently filed, taken, or dropped", recent, :outcome, now))
+      lines.concat(render_table("Recently filed, taken, dropped, or dismissed", recent, :outcome, now))
       unless @listener_info
         lines << "Start one: `ruby #{SCRIPT_PATH} start <repo>#<n>` · all queued: `... start --all`"
       end
@@ -1164,13 +1258,21 @@ module ReviewDesk
 
     def extra_cell(entry, extra)
       case extra
-      when :verdict then verdict_cell(entry)
+      when :verdict then "#{verdict_cell(entry)}#{dismiss_link(entry) if entry["state"] == "verdict-ready"}"
       when :start
         stale = " · [stale verdict](file://#{entry["stale_verdict"]})" if entry["stale_verdict"]
-        "#{start_cell(entry)}#{stale}"
+        "#{start_cell(entry)}#{stale}#{dismiss_link(entry)}"
       when :outcome then outcome_cell(entry)
-      when :none then "no `#{checkout_dir(entry["repo"]).sub(Dir.home, "~")}`"
+      when :none then "no `#{checkout_dir(entry["repo"]).sub(Dir.home, "~")}`#{dismiss_link(entry)}"
       end
+    end
+
+    def dismiss_link(entry)
+      " · [dismiss](#{action_url(entry, "dismiss")})" if @listener_info
+    end
+
+    def action_url(entry, action)
+      start_url(@listener_info, "/#{action}/#{entry["repo"]}/#{entry["number"]}")
     end
 
     def start_cell(entry)
@@ -1198,6 +1300,7 @@ module ReviewDesk
       when "filed"
         artifact = verdict_artifact(entry)
         artifact ? "filed · [explainer](#{artifact})" : "filed"
+      when "dismissed" then @listener_info ? "dismissed · [undo](#{action_url(entry, "undismiss")})" : "dismissed"
       else "dropped"
       end
     end
@@ -1309,7 +1412,7 @@ end
 if __FILE__ == $PROGRAM_NAME
   options = { interval: 300, max_concurrent: 3, teams: [], username: "rwc9u" }
   parser = OptionParser.new do |opts|
-    opts.banner = "Usage: #{$PROGRAM_NAME} <watch|tick|start|prepare|prune|bots|max-age> [options]"
+    opts.banner = "Usage: #{$PROGRAM_NAME} <watch|tick|start|dismiss|undismiss|prepare|prune|bots|max-age> [options]"
     opts.on("--interval SECONDS", Integer, "Seconds between watch ticks (default: 300)") do |v|
       options[:interval] = v
     end
@@ -1353,6 +1456,9 @@ if __FILE__ == $PROGRAM_NAME
   when "start"
     abort "start needs a PR reference, a PR URL, or --all" if ARGV.empty? && !options[:all]
     desk.start(ARGV, all: options[:all] || false)
+  when "dismiss", "undismiss"
+    abort "#{command} needs a PR reference or a PR URL" if ARGV.empty?
+    ARGV.each { |target| puts desk.public_send(command, target) }
   when "prepare"
     abort "prepare needs an owner/repo#n key" if ARGV.empty?
     exit(desk.prepare(ARGV.first) ? 0 : 1)
