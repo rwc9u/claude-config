@@ -160,8 +160,8 @@ summary. For a migration, the visual should show the schema before → after
 
 ### 11. Record the Verdict for the Review Desk
 
-When `REVIEW_DESK_DIR` is set, also write the review summary to
-`$REVIEW_DESK_DIR/<owner>-<repo>-<number>.md` (create the directory if needed).
+When the arguments include `--desk`, also write the review summary to
+`~/.local/state/review-desk/verdicts/<owner>-<repo>-<number>.md` (create the directory if needed).
 Line 1 is `verdict: <Approve|Request changes|Needs discussion>`, line 2 is
 `head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
 URL>`, then the summary. Do not file a

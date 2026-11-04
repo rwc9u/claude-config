@@ -149,9 +149,9 @@ module ReviewDesk
     # Mixed requests get the general review; only a migration-team-only request gets the migration review.
     def review_prompt(entry)
       if !entry["direct"] && entry["teams"] == [MIGRATION_TEAM]
-        "/review-migration-pr #{entry["number"]}"
+        "/review-migration-pr #{entry["number"]} --desk"
       else
-        "/review-pr #{entry["number"]} low"
+        "/review-pr #{entry["number"]} low --desk"
       end
     end
 
@@ -906,7 +906,7 @@ module ReviewDesk
       stamp = "printf '%s launch %s\\n' \"$(date +%T)\" #{sh_quote(entry["key"])} >> #{sh_quote(TIMING_LOG)}; "
       run = "-x sh -- -c #{sh_quote("#{pull}#{stamp}exec claude #{sh_quote(prompt)}")}"
       "#{sh_quote(RbConfig.ruby)} #{sh_quote(SCRIPT_PATH)} prepare #{sh_quote(entry["key"])} && " \
-        "cd #{sh_quote(checkout_dir(entry["repo"]))} && REVIEW_DESK_DIR=#{sh_quote(VERDICT_DIR)} " \
+        "cd #{sh_quote(checkout_dir(entry["repo"]))} && " \
         "wt switch pr:#{entry["number"]} #{run}"
     end
 

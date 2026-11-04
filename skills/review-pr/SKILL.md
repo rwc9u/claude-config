@@ -1,7 +1,7 @@
 ---
 name: review-pr
 description: This skill should be used when the user asks to "review this PR", "review PR <number>", "give me a verdict on this PR", "should I approve this", "act as the reviewer", "review and approve", or wants a reviewer's approve/request-changes recommendation on a pull request they are reviewing (not authoring). Do NOT use when the user wants a raw findings scan (use the built-in code-review skill) or wants to triage existing PR comments (use pr-feedback-triage).
-argument-hint: "[pr-number] [low|medium|high|xhigh|max] [--file]"
+argument-hint: "[pr-number] [low|medium|high|xhigh|max] [--file] [--desk]"
 ---
 
 # Review Pull Request
@@ -25,6 +25,8 @@ All arguments are optional and may be combined in any order:
   level only when the user asks for one.
 - `--file` — pre-authorizes filing the finished review on GitHub without a
   second confirmation prompt. Without this flag, always ask before filing.
+- `--desk` — the review desk launched this session. Write the verdict file in
+  step 5 and run the desk commands in step 6.
 
 ## Process
 
@@ -85,8 +87,8 @@ with intent `other`), and load `artifact-diagramming` for the visual.
 Present the verdict first, then the explainer link, then blocking items, then
 non-blocking items. Keep it tight — this is for the human reviewer to act on.
 
-When `REVIEW_DESK_DIR` is set, also write the report to
-`$REVIEW_DESK_DIR/<owner>-<repo>-<number>.md` (create the directory if needed).
+With `--desk`, also write the report to
+`~/.local/state/review-desk/verdicts/<owner>-<repo>-<number>.md` (create the directory if needed).
 Line 1 is `verdict: <Approve|Approve with comments|Request changes>`, line 2 is
 `head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
 URL>`, then the report.
@@ -108,10 +110,10 @@ Only after explicit confirmation (or when `--file` was passed):
   and a blank line; leave non-blocking items out unless the user wants them
 - Never file a review without the user's go-ahead in this session unless
   `--file` was explicitly passed
-- When `REVIEW_DESK_DIR` is set, after filing run
+- With `--desk`, after filing run
   `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb tick >/dev/null 2>&1 &`
   as the last step and say the tab will close; the desk closes it within seconds
-- When `REVIEW_DESK_DIR` is set and the user says to ignore, dismiss, or skip
+- With `--desk`, when the user says to ignore, dismiss, or skip
   the PR instead of filing, don't write an "Ignore" verdict; run
   `nohup ruby ~/.claude/skills/review-desk/scripts/review-desk.rb dismiss <owner/repo#n> >/dev/null 2>&1 &`
   as the last step and say the tab will close

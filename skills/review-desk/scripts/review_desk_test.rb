@@ -72,17 +72,17 @@ class ReviewDeskTransitionTest < Minitest::Test
   end
 
   def test_migration_team_only_request_gets_migration_review
-    assert_equal "/review-migration-pr 7",
+    assert_equal "/review-migration-pr 7 --desk",
                  Transition.review_prompt(entry("queued", number: 7, teams: ["db-migration-reviewers"]))
   end
 
   def test_mixed_team_request_gets_general_review
-    assert_equal "/review-pr 7 low",
+    assert_equal "/review-pr 7 low --desk",
                  Transition.review_prompt(entry("queued", number: 7, teams: ["api-guild", "db-migration-reviewers"]))
   end
 
   def test_direct_request_gets_general_review
-    assert_equal "/review-pr 7 low",
+    assert_equal "/review-pr 7 low --desk",
                  Transition.review_prompt(entry("queued", number: 7, direct: true, teams: ["db-migration-reviewers"]))
   end
 
