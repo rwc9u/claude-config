@@ -71,6 +71,20 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
   end
 
+  def test_recent_rows_list_newest_finish_first
+    now = Time.utc(2026, 11, 4, 12)
+    rows = [
+      entry("filed", number: 1, state_changed_at: "2026-11-04T09:00:00Z"),
+      entry("dropped", number: 2, state_changed_at: "2026-11-04T11:00:00Z"),
+      entry("queued", number: 3, state_changed_at: "2026-11-04T11:30:00Z"),
+      entry("taken", number: 4, state_changed_at: "2026-11-04T10:00:00Z"),
+    ]
+
+    recent = ReviewDesk::Desk.new(username: "rwc9u").send(:recent_rows, rows, now)
+
+    assert_equal [2, 4, 1], recent.map { |e| e["number"] }
+  end
+
   def test_migration_team_only_request_gets_migration_review
     assert_equal "/review-migration-pr 7 --desk",
                  Transition.review_prompt(entry("queued", number: 7, teams: ["db-migration-reviewers"]))

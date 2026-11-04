@@ -1224,7 +1224,7 @@ module ReviewDesk
         rows = sort_rows(entries.select { |e| e["state"] == group_state })
         lines.concat(render_table(title, rows, extra, now))
       end
-      recent = entries.select { |e| DONE_STATES.include?(e["state"]) && recent?(e, now) }
+      recent = recent_rows(entries, now)
       lines.concat(render_table("Recently filed, taken, dropped, or dismissed", recent, :outcome, now))
       unless @listener_info
         lines << "Start one: `ruby #{SCRIPT_PATH} start <repo>#<n>` · all queued: `... start --all`"
@@ -1245,6 +1245,11 @@ module ReviewDesk
       teams = queued.flat_map { |e| e["direct"] ? [] : e["teams"] }.tally.sort_by { |t, n| [-n, t] }
       team_text = teams.map { |t, n| "#{t} #{n}" }.join(", ")
       "**#{queued.size} queued** (#{queued.count { |e| e["direct"] }} direct#{", #{team_text}" unless teams.empty?})"
+    end
+
+    def recent_rows(entries, now)
+      entries.select { |e| DONE_STATES.include?(e["state"]) && recent?(e, now) }
+             .sort_by { |e| e["state_changed_at"] }.reverse
     end
 
     def sort_rows(rows)
