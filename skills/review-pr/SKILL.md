@@ -70,6 +70,9 @@ Publish an Artifact that explains the PR to someone who hasn't opened it, and
 reference it from the verdict. Follow the Artifact tool's own flow (quickstart
 with intent `other`), and load `artifact-diagramming` for the visual.
 
+- **Links**: at the top, link the PR and, when the title, branch, or
+  description names one, the ticket it's for. Use the ticket URL from the
+  description; for a bare Linear ID, use `https://linear.app/kajabi/issue/<ID>`
 - **Why**: the problem the PR solves, in two or three sentences
 - **What changed**: grouped by area, each as before → after, naming the key
   files; skip lockfiles and generated files
