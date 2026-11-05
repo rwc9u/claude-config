@@ -2,7 +2,7 @@
 # Entry point for review-desk.rb: installs watch's gems for whichever Ruby this shell resolves, then runs it.
 set -e
 
-dir=$(cd "$(dirname "$0")" && pwd)
+dir=$(dirname "$(readlink -f "$0")")
 export BUNDLE_GEMFILE="$dir/Gemfile"
 
 if [ "$1" = watch ] && ! bundle check >/dev/null 2>&1; then
