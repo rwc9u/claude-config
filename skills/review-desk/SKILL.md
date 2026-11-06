@@ -103,8 +103,9 @@ failed" in its Start cell and can be started again. A `reviewing` PR whose tab
 is gone (closed, or cmux quit) before a verdict lands goes back to `queued` the
 same way on the next tick. The watcher
 notifies once per tick when PRs arrive, and notifies + flashes the tab when a
-verdict lands. When a PR reaches `filed` or `dismissed`, the next tick closes its review tab;
-the worktree stays until `prune`.
+verdict lands. When a PR reaches `filed` or `dismissed`, the next tick closes its review tab.
+Once a finished review's tab is gone, the desk runs `wt remove` on its worktree, once; a
+worktree with uncommitted changes fails removal and stays for `prune`.
 
 ## Filters
 
@@ -139,7 +140,8 @@ with `app/`.
 - `$DESK tick` — one pass. Add `--dry-run` to fetch and render `queue.md`
   without spawning, cmux calls, or saving state.
 - `$DESK prune` — print `wt remove` commands for worktrees of filed, taken,
-  dropped, and dismissed PRs. Run them only with `--yes`, and only when the user asks.
+  dropped, and dismissed PRs that are still around (older reviews, or ones that
+  failed removal). Run them only with `--yes`, and only when the user asks.
 
 ## Files
 

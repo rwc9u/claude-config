@@ -140,6 +140,13 @@ module ReviewDesk
         .map { |e| e["key"] }
     end
 
+    # Only worktrees the desk opened a review in, once that tab is gone; a dirty one fails removal and stays.
+    def worktrees_to_remove(entries)
+      entries
+        .select { |e| e["remove_worktree"] && DONE_STATES.include?(e["state"]) && !e["surface"] }
+        .map { |e| e["key"] }
+    end
+
     # GitHub clears a review request once it's answered; keep who asked.
     def requested_by(entry, direct, teams)
       return { "direct" => direct, "teams" => teams } if direct || teams.any?
@@ -381,11 +388,12 @@ module ReviewDesk
         warn "[#{Time.now.utc.iso8601}] gh failed, keeping previous state: #{e.message}"
         nil
       end
-      locked do |state|
+      removals = locked do |state|
         @filters = filters
         state["my_teams"] = teams if teams
         fetched ? merge_tick(state, *fetched) : render(state, Time.now.utc)
       end
+      remove_worktrees(removals) if fetched
       !fetched.nil?
     end
 
@@ -416,6 +424,7 @@ module ReviewDesk
         next "#{short_ref(entry)} is #{entry["state"]}; nothing to dismiss." if DONE_STATES.include?(entry["state"])
 
         entry.merge!("state" => "dismissed", "state_changed_at" => Time.now.utc.iso8601)
+        entry["remove_worktree"] = true if entry["spawned_at"]
         rerender(state)
         snapshot = state
         "Dismissed #{short_ref(entry)}; the dashboard updated."
@@ -432,6 +441,7 @@ module ReviewDesk
         next "#{short_ref(entry)} is #{entry["state"]}, not dismissed." unless entry["state"] == "dismissed"
 
         entry.merge!("state" => "queued", "state_changed_at" => Time.now.utc.iso8601)
+        entry.delete("remove_worktree")
         rerender(state)
         "#{short_ref(entry)} restored to Queued; the dashboard updated."
       end
@@ -506,6 +516,20 @@ module ReviewDesk
       state["last_tick_at"] = now.iso8601
       spawn_and_render(state, now)
       puts "[#{now.getlocal.strftime("%H:%M")}] #{summary_line(visible_entries(state, now)).delete("*")}"
+      Transition.worktrees_to_remove(state["prs"].values)
+                .map { |key| state["prs"][key].slice("key", "repo", "head_ref") }
+    end
+
+    # Detached: listener clicks run ticks, and a hook-running `wt remove` would hold the page. One try each.
+    def remove_worktrees(entries)
+      return if entries.empty? || dry_run
+
+      locked { |state| entries.each { |e| state["prs"][e["key"]]&.delete("remove_worktree") } }
+      entries.each do |entry|
+        cmd = prune_command(entry) or next
+        puts "  removing worktree #{entry["head_ref"]}"
+        Process.detach(Process.spawn(*cmd, "-y", in: File::NULL, pgroup: true))
+      end
     end
 
     def spawn_and_render(state, now)
@@ -632,10 +656,12 @@ module ReviewDesk
 
     def enter_state(entry, old_state, new_state, facts, now)
       entry.delete("last_error")
+      entry["remove_worktree"] = true if DONE_STATES.include?(new_state) && entry["spawned_at"]
       case new_state
       when "queued"
         retire_verdict(entry) if %w[verdict-ready filed].include?(old_state)
         entry.delete("surface")
+        entry.delete("remove_worktree")
         entry["last_error"] = TAB_CLOSED_ERROR if old_state == "reviewing"
       when "verdict-ready"
         entry["review_head"] = verdict_head(entry) || entry["review_head"]

@@ -71,6 +71,38 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
   end
 
+  def test_worktrees_to_remove_waits_for_the_tab_to_close
+    entries = [
+      entry("filed", number: 1, remove_worktree: true),
+      entry("filed", number: 2, remove_worktree: true, surface: "surface:7"),
+      entry("queued", number: 3, remove_worktree: true),
+      entry("dropped", number: 4),
+    ]
+
+    assert_equal ["Kajabi/repo#1"], Transition.worktrees_to_remove(entries)
+  end
+
+  def test_finishing_a_spawned_review_flags_its_worktree
+    pr = entry("verdict-ready", spawned_at: "2026-11-06T10:00:00Z")
+    ReviewDesk::Desk.new(username: "rwc9u").send(:enter_state, pr, "verdict-ready", "filed", facts, Time.now.utc)
+
+    assert pr["remove_worktree"]
+  end
+
+  def test_finishing_an_unstarted_pr_leaves_worktrees_alone
+    pr = entry("queued")
+    ReviewDesk::Desk.new(username: "rwc9u").send(:enter_state, pr, "queued", "dropped", facts, Time.now.utc)
+
+    refute pr["remove_worktree"]
+  end
+
+  def test_requeueing_keeps_the_worktree_for_the_next_review
+    pr = entry("filed", spawned_at: "2026-11-06T10:00:00Z", remove_worktree: true)
+    ReviewDesk::Desk.new(username: "rwc9u").send(:enter_state, pr, "filed", "queued", facts, Time.now.utc)
+
+    refute pr["remove_worktree"]
+  end
+
   def test_recent_rows_list_newest_finish_first
     now = Time.utc(2026, 11, 4, 12)
     rows = [
