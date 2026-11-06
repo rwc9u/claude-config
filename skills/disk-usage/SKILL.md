@@ -122,7 +122,7 @@ Then recommend from this checklist, as a table of area / size / action / risk:
 | Homebrew cache | `du -sh ~/Library/Caches/Homebrew` | `brew cleanup -s --prune=all` |
 | Yarn cache | `du -sh ~/Library/Caches/Yarn` | `yarn cache clean` |
 | npm cache | `du -sh ~/.npm` | `npm cache clean --force` |
-| pnpm store | `du -sh ~/Library/Caches/pnpm ~/Library/pnpm/store` | `pnpm store prune` |
+| pnpm store | `du -sh ~/Library/Caches/pnpm ~/Library/pnpm/store` | `pnpm store prune` and `pnpm cache delete` (metadata) |
 | Other caches | `du -sh ~/Library/Caches/* \| sort -rh \| head` (Cypress, ms-playwright, org.swift.swiftpm, Google), `~/.cache` | Remove the folder; re-downloads on demand |
 | asdf runtimes | `ls ~/.asdf/installs/{ruby,nodejs}` vs `cat ~/dev/*/.tool-versions ~/dev/*/.ruby-version ~/.tool-versions` | `asdf uninstall <tool> <ver>` for unreferenced versions |
 | Docker | `docker system df` | `docker builder prune`, `docker volume prune`. The VM disk file (`~/Library/Containers/com.docker.docker`) only shrinks on a Docker Desktop disk reset |
@@ -130,6 +130,10 @@ Then recommend from this checklist, as a table of area / size / action / risk:
 | Claude desktop VM | `du -sh ~/Library/Application\ Support/Claude/vm_bundles` | Delete; re-downloads if VM features are used |
 | Downloads | `du -sh ~/Downloads` | User reviews |
 | Trash | — | Empty in Finder |
+
+**asdf shims need a version:** run `yarn`/`pnpm` from `~/dev` (it pins Node), not
+`~`, and set `ASDF_PNPM_VERSION=<installed version>` for pnpm. Otherwise they print
+"No version is set" and clean nothing.
 
 Recommend the no-downside rows (caches, Docker prune, simulators) as a default
 batch, and run only the rows the user approves. Report freed space after each.
