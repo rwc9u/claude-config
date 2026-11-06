@@ -4,9 +4,9 @@
 # Convert a Spotify link to its Apple Music equivalent and open it in the Music app.
 #
 # Spotify and Apple Music use different catalog IDs, so there is no direct URL
-# rewrite. This resolves the Spotify entity to clean title/artist metadata via the
-# free Odesli (song.link) API, then looks up the exact Apple Music catalog item with
-# the iTunes Search API to produce a direct deep link. A deep link is essential: an
+# rewrite. This reads the title from Spotify's oEmbed endpoint and the artist from
+# the public page's og:description, then looks up the exact Apple Music catalog item
+# with the iTunes Search API to produce a direct deep link. A deep link is essential: an
 # in-app "search" URL lands on the (usually empty) Library scope rather than the
 # Apple Music catalog, so it is used only as a last resort.
 #
@@ -18,21 +18,22 @@
 #                   the music:// scheme that launches the Apple Music app.
 #     --print-only  Resolve and print the Apple Music URL without opening anything.
 
+require "cgi/escape"
 require "json"
 require "net/http"
 require "uri"
 
-ODESLI_ENDPOINT = "https://api.song.link/v1-alpha.1/links"
+SPOTIFY_OEMBED_ENDPOINT = "https://open.spotify.com/oembed"
 ITUNES_ENDPOINT = "https://itunes.apple.com/search"
 SPOTIFY_HOST_RE = %r{\Ahttps?://open\.spotify\.com/}i
 USER_AGENT = "spotify-to-apple-music-skill/1.0"
 
-# Map Odesli entity types to the iTunes Search "entity" value and the result
-# field that holds the direct Apple Music URL for that kind of item.
+# Map the Spotify URL kind to the iTunes Search "entity" value and the result
+# fields holding the item's name and Apple Music URL. Playlists have no catalog match.
 ITUNES_LOOKUP = {
-  "song" => ["song", "trackViewUrl"],
-  "album" => ["album", "collectionViewUrl"],
-  "artist" => ["musicArtist", "artistViewUrl"],
+  "track" => ["song", "trackName", "trackViewUrl"],
+  "album" => ["album", "collectionName", "collectionViewUrl"],
+  "artist" => ["musicArtist", "artistName", "artistLinkUrl"],
 }.freeze
 
 def fail_with(message)
@@ -57,35 +58,51 @@ def normalize_spotify_url(raw)
   parsed.to_s
 end
 
-def get_json(url, timeout: 20)
+def http_get(url, timeout: 20)
   uri = URI.parse(url)
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = uri.scheme == "https"
   http.open_timeout = timeout
   http.read_timeout = timeout
-  request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => USER_AGENT)
-  response = http.request(request)
+  http.request(Net::HTTP::Get.new(uri.request_uri, "User-Agent" => USER_AGENT))
+end
+
+def get_json(url)
+  response = http_get(url)
   [response, JSON.parse(response.body)]
 end
 
-def resolve(spotify_url)
-  query = URI.encode_www_form(url: spotify_url, userCountry: "US")
-  response, data = get_json("#{ODESLI_ENDPOINT}?#{query}")
-  unless response.is_a?(Net::HTTPSuccess)
-    if response.code == "429"
-      fail_with("Odesli rate limit hit (HTTP 429). Wait a moment and retry.")
-    end
-    fail_with("Odesli request failed: HTTP #{response.code}")
-  end
-  data
-rescue SocketError, Timeout::Error, Errno::ECONNREFUSED => e
-  fail_with("Could not reach the Odesli API: #{e.message}")
+def spotify_kind(spotify_url)
+  URI.parse(spotify_url).path.split("/").reject(&:empty?).first
 end
 
-def entity_metadata(data)
-  entity_id = data["entityUniqueId"]
-  entity = data.dig("entitiesByUniqueId", entity_id) || {}
-  [entity["title"], entity["artistName"], entity["type"]]
+def spotify_title(spotify_url)
+  query = URI.encode_www_form(url: spotify_url)
+  response, data = get_json("#{SPOTIFY_OEMBED_ENDPOINT}?#{query}")
+  fail_with("Spotify oEmbed request failed: HTTP #{response.code}") unless response.is_a?(Net::HTTPSuccess)
+
+  data["title"]
+end
+
+# Track and album pages describe themselves as "Artist · Title · Song · 2026" and
+# "Artist · album · 2018 · 25 songs", so the artist is the first segment.
+def spotify_artist(spotify_url, kind)
+  return nil unless %w[track album].include?(kind)
+
+  response = http_get(spotify_url)
+  return nil unless response.is_a?(Net::HTTPSuccess)
+
+  description = response.body.force_encoding(Encoding::UTF_8)[/<meta property="og:description" content="([^"]*)"/, 1]
+  return nil unless description
+
+  CGI.unescapeHTML(description).split(" · ").first&.strip
+end
+
+def resolve(spotify_url)
+  kind = spotify_kind(spotify_url)
+  [spotify_title(spotify_url), spotify_artist(spotify_url, kind), kind]
+rescue SocketError, Timeout::Error, Errno::ECONNREFUSED, JSON::ParserError => e
+  fail_with("Could not read Spotify metadata: #{e.message}")
 end
 
 # Look up the exact Apple Music catalog item and return its direct URL.
@@ -94,22 +111,22 @@ end
 # search URL. The artist is appended as a refinement; Apple Music's in-app search
 # chokes on combined "title artist" strings (especially around '&'), but the
 # iTunes Search API handles them fine and returns a precise deep link.
-def itunes_deep_link(title, artist, entity_type)
+def itunes_deep_link(title, artist, kind)
   return nil if title.nil? || title.empty?
+  return nil unless ITUNES_LOOKUP.key?(kind)
 
-  entity_value, url_field = ITUNES_LOOKUP.fetch(entity_type, ["song", "trackViewUrl"])
+  entity_value, name_field, url_field = ITUNES_LOOKUP.fetch(kind)
   term = artist && !artist.empty? ? "#{title} #{artist}" : title
   params = URI.encode_www_form(term: term, entity: entity_value, limit: 5, country: "US")
 
   response, data = get_json("#{ITUNES_ENDPOINT}?#{params}")
   return nil unless response.is_a?(Net::HTTPSuccess)
 
-  Array(data["results"]).each do |result|
-    url = result[url_field]
-    # Strip the affiliate/tracking suffix so the link opens cleanly.
-    return url.sub(/[?&]uo=\d+\z/, "") if url && !url.empty?
-  end
-  nil
+  # iTunes often ranks remixes and features above the original, so prefer an exact name.
+  candidates = Array(data["results"]).select { |result| result[url_field].to_s != "" }
+  best = candidates.find { |result| result[name_field].to_s.casecmp?(title) } || candidates.first
+  # Strip the affiliate/tracking suffix so the link opens cleanly.
+  best && best[url_field].sub(/[?&]uo=\d+\z/, "")
 rescue SocketError, Timeout::Error, Errno::ECONNREFUSED, JSON::ParserError
   nil
 end
@@ -139,16 +156,9 @@ def main
   fail_with("Provide exactly one Spotify URL.") unless positionals.length == 1
 
   spotify_url = normalize_spotify_url(positionals.first)
-  data = resolve(spotify_url)
+  title, artist, kind = resolve(spotify_url)
 
-  platforms = data["linksByPlatform"] || {}
-  apple = platforms["appleMusic"] || platforms["itunes"]
-  title, artist, entity_type = entity_metadata(data)
-
-  if apple && apple["url"]
-    https_url = apple["url"]
-    source = "direct Apple Music link (via Odesli)"
-  elsif (deep_link = itunes_deep_link(title, artist, entity_type))
+  if (deep_link = itunes_deep_link(title, artist, kind))
     https_url = deep_link
     source = "direct Apple Music link (via iTunes lookup)"
   else

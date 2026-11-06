@@ -20,9 +20,8 @@ Invoke this skill when the user:
 Spotify and Apple Music use different catalog IDs, so a link cannot be rewritten
 directly. The script:
 
-1. Resolves the Spotify entity to clean title/artist metadata via the free
-   [Odesli / song.link](https://odesli.co) API (using Odesli's own Apple Music
-   link when present).
+1. Reads the title from Spotify's public oEmbed endpoint and, for tracks and
+   albums, the artist from the page's `og:description`. No auth needed.
 2. Looks up the exact Apple Music catalog item with the **iTunes Search API** to
    build a direct deep link (e.g. `…/album/<name>/<id>?i=<track-id>`).
 3. Opens that deep link via the `music://` scheme so the **Apple Music app**
@@ -30,7 +29,8 @@ directly. The script:
 
 A deep link is important: an in-app `search?term=` URL lands on the (usually
 empty) **Library** scope rather than the Apple Music catalog, so a search URL is
-only used as a last resort when no catalog match is found.
+only used as a last resort when no catalog match is found. Playlists have no
+catalog equivalent, so they always fall back to search.
 
 ## How to Use
 
@@ -70,5 +70,10 @@ search fallback, and the Apple Music URL it opened.
 ## Notes
 
 - Requires macOS (`open` command) and Ruby (standard library only — no gems).
-- The Odesli API is unauthenticated and rate-limited; on HTTP 429 the script
-  reports the limit so you can retry after a moment.
+- Odesli (song.link) is not used: its public API was shut down
+  (`401 PUBLIC_API_ACCESS_DEPRECATED`).
+- Run the script by its absolute path,
+  `~/.claude/skills/spotify-to-apple-music/scripts/spotify_to_apple_music.rb`;
+  the relative paths above only resolve from the `claude-config` repo root.
+- If the user shares a Slack message link instead, read the message first to
+  get the Spotify URL.
