@@ -304,6 +304,31 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "dropped", Transition.call(entry("queued"), facts(open: false))
   end
 
+  def test_pr_merged_right_after_a_teammate_approval_is_taken
+    assert_equal "taken", Transition.call(entry("queued"), facts(open: false, taken_by: "john-kajabi (approved)"))
+  end
+
+  def test_pr_merged_after_your_review_is_filed
+    assert_equal "filed", Transition.call(entry("verdict-ready"), facts(open: false, reviewed_at_head: true))
+  end
+
+  def test_filed_pr_stays_filed_when_merged
+    assert_equal "filed", Transition.call(entry("filed", surface: "surface:7"), facts(open: false))
+  end
+
+  def test_bot_reviews_do_not_take_a_pr
+    desk = ReviewDesk::Desk.new(username: "rwc9u")
+    desk.instance_variable_set(:@my_teams, [])
+    pr = {
+      "author" => { "login" => "ktsalz" }, "headRefOid" => "abc", "reviewRequests" => { "nodes" => [] },
+      "latestReviews" => { "nodes" => [
+        { "author" => { "__typename" => "Bot", "login" => "cursor" }, "state" => "COMMENTED",
+          "submittedAt" => "2026-11-09T19:00:00Z", },
+      ] },
+    }
+    assert_nil desk.send(:summarize, "Kajabi/kubernetes", pr, "main")[:taken_by]
+  end
+
   def test_withdrawn_request_without_other_review_is_dropped
     assert_equal "dropped", Transition.call(entry("queued"), facts(requested: false))
   end

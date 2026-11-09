@@ -72,7 +72,7 @@ module ReviewDesk
 
     def call(entry, facts, verdict_ready: false, tab_open: true)
       state = entry && entry["state"]
-      return(state && "dropped") unless facts.open
+      return(state && closed(state, facts)) unless facts.open
       return state if state == "dismissed"
       return "filed" if facts.reviewed_at_head && (state || facts.requested)
       return(facts.requested ? arrival(facts) : nil) if state.nil?
@@ -224,6 +224,13 @@ module ReviewDesk
     def withdrawn(facts)
       facts.taken_by ? "taken" : "dropped"
     end
+
+    # A merge often lands within a tick of the approval, so a closed PR still credits whoever reviewed it.
+    def closed(state, facts)
+      return state if %w[filed taken dropped].include?(state)
+
+      facts.reviewed_at_head ? "filed" : withdrawn(facts)
+    end
   end
 
   # Pure request routing for the watcher's local listener.
@@ -343,7 +350,7 @@ module ReviewDesk
       number title url state isDraft createdAt baseRefName headRefName headRefOid author { __typename login }
       reviewRequests(first: 30) { nodes { requestedReviewer {
         __typename ... on User { login } ... on Team { slug organization { login } } } } }
-      latestReviews(first: 30) { nodes { author { login } state submittedAt commit { oid } } }
+      latestReviews(first: 30) { nodes { author { __typename login } state submittedAt commit { oid } } }
     GRAPHQL
     GRAPHQL_CHUNK = 25
 
@@ -807,7 +814,9 @@ module ReviewDesk
       submitted = pr.dig("latestReviews", "nodes").reject { |r| %w[PENDING DISMISSED].include?(r["state"]) }
       author = pr.dig("author", "login")
       mine_reviews, others = submitted.partition { |r| r.dig("author", "login")&.casecmp?(username) }
-      latest_other = others.reject { |r| r.dig("author", "login") == author }.max_by { |r| r["submittedAt"].to_s }
+      latest_other = others
+        .reject { |r| r.dig("author", "login") == author || Transition.bot_author?(r["author"]) }
+        .max_by { |r| r["submittedAt"].to_s }
 
       {
         repo: repo,
