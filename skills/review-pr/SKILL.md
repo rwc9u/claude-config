@@ -2,6 +2,7 @@
 name: review-pr
 description: This skill should be used when the user asks to "review this PR", "review PR <number>", "give me a verdict on this PR", "should I approve this", "act as the reviewer", "review and approve", or wants a reviewer's approve/request-changes recommendation on a pull request they are reviewing (not authoring). Do NOT use when the user wants a raw findings scan (use the built-in code-review skill) or wants to triage existing PR comments (use pr-feedback-triage).
 argument-hint: "[pr-number] [low|medium|high|xhigh|max] [--file] [--desk]"
+model: opus
 ---
 
 # Review Pull Request

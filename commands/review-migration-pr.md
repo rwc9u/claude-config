@@ -1,5 +1,6 @@
 ---
 description: Review a migration PR from kajabi-products with the branch checked out locally
+model: opus
 allowed-tools: Bash, Read, Glob, Grep, Task
 ---
 

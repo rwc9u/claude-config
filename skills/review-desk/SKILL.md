@@ -11,7 +11,8 @@ review is requested from `rwc9u` directly or from one of his teams. A watcher
 refreshes a markdown dashboard every 5 minutes. Reviews never start on their
 own: the user picks which PRs to start, and each one opens a tab running
 `/review-pr <n> low --desk` inside a `wt` worktree of that PR. A PR requested only from
-`db-migration-reviewers` gets `/review-migration-pr <n> --desk` instead.
+`db-migration-reviewers` gets `/review-migration-pr <n> --desk` instead. Review tabs run
+`claude --model opus`, whatever the default model is.
 
 ```bash
 DESK="${SKILL_DIR}/scripts/review-desk.sh"

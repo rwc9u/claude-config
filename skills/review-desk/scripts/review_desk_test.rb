@@ -71,6 +71,13 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_operator command.index("prepare"), :<, command.index("wt switch pr:59817")
   end
 
+  def test_review_sessions_run_on_opus_whatever_the_default_model
+    pr = { "key" => "Kajabi/kajabi-products#59817", "repo" => "Kajabi/kajabi-products", "number" => 59_817 }
+    command = ReviewDesk::Desk.new(username: "rwc9u").send(:review_command, pr)
+
+    assert_includes command, "exec claude --model opus "
+  end
+
   def test_worktrees_to_remove_waits_for_the_tab_to_close
     entries = [
       entry("filed", number: 1, remove_worktree: true),
