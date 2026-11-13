@@ -1,7 +1,7 @@
 ---
 name: review-desk
 description: This skill should be used when the user asks to "start my review desk", "review desk", "track my reviews", "review queue", "start review <n>", "review <PR link>", "start all reviews", "show/hide bot PRs", "only show PRs from the last week", "dismiss <PR>", "ignore <PR>", "undismiss <PR>", or invokes /review-desk. It runs a cmux "Reviews" workspace that tracks every open PR awaiting the user's review (direct or team requests), shows a live dashboard, and starts a /review-pr session per PR on request.
-argument-hint: "[start <repo>#<n> | start <PR URL> | start --all | dismiss|undismiss <repo>#<n> | bots on|off | max-age <days>|off | tick | prune]"
+argument-hint: "[start [--again] <repo>#<n> | start <PR URL> | start --all | dismiss|undismiss <repo>#<n> | bots on|off | max-age <days>|off | tick | prune]"
 ---
 
 # Review Desk
@@ -56,7 +56,9 @@ $DESK start --all                    # every queued PR
 ```
 
 A PR URL works for any open, non-draft PR, even one nobody requested from you
-or one already taken or dropped (filed too, once it has new commits). It becomes a manual entry (Requested
+or one already taken or dropped (filed too, once it has new commits or replies).
+`$DESK start --again <ref>` reopens a PR you already reviewed as a follow-up even
+when nobody has replied. It becomes a manual entry (Requested
 shows `you (manual)`) that behaves like a direct request and ignores `max-age`.
 
 `start` marks the PRs `start-requested` and opens review tabs right away, without
@@ -97,7 +99,11 @@ link, and a recently dismissed row has an **undo** link.
   until `undismiss`, but closing or merging still drops it
 
 A new head SHA on a `verdict-ready` or `filed` PR that is still requested sends
-it back to `queued`; the old verdict is kept as a stale link. A `verdict-ready`
+it back to `queued`; the old verdict is kept as a stale link. For 14 days after
+filing, a comment or review from anyone but you or a bot after your latest review
+or comment also sends it back, as a **follow-up** (unless you approved the current
+head). Follow-ups run `/review-pr <n> low --desk --followup` and return to `filed`
+once you reply or review again. A `verdict-ready`
 PR whose request is withdrawn becomes `taken` or `dropped`. Worktree creation
 is serialized per repo; if it fails, the PR goes back to `queued` with "last try
 failed" in its Start cell and can be started again. A `reviewing` PR whose tab

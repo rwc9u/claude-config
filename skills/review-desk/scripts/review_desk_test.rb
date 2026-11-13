@@ -323,6 +323,94 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "filed", Transition.call(entry("filed", surface: "surface:7"), facts(open: false))
   end
 
+  def test_reply_after_your_filed_review_requeues_it
+    assert_equal "queued", Transition.call(entry("filed"), facts(requested: false, reviewed_at_head: true, followup_due: true))
+  end
+
+  def test_followup_stays_queued_while_the_reply_is_unanswered
+    assert_equal "queued", Transition.call(entry("queued"), facts(reviewed_at_head: true, followup_due: true))
+  end
+
+  def test_followup_you_started_holds_until_you_respond
+    pr = entry("start-requested", followup_at: "2026-11-13T17:00:00Z")
+    assert_equal "start-requested",
+                 Transition.call(pr, facts(reviewed_at_head: true, last_touch_at: "2026-11-13T16:47:29Z"))
+  end
+
+  def test_followup_is_filed_once_you_respond
+    pr = entry("verdict-ready", followup_at: "2026-11-13T17:00:00Z")
+    assert_equal "filed", Transition.call(pr, facts(reviewed_at_head: true, last_touch_at: "2026-11-13T17:30:00Z"))
+  end
+
+  def test_followup_review_prompt
+    pr = entry("queued", number: 50, teams: [ReviewDesk::MIGRATION_TEAM], followup_at: "2026-11-13T17:00:00Z")
+    assert_equal "/review-pr 50 low --desk --followup", Transition.review_prompt(pr)
+  end
+
+  def test_requeueing_for_a_reply_marks_the_followup
+    pr = entry("filed")
+    ReviewDesk::Desk.new(username: "rwc9u")
+                    .send(:enter_state, pr, "filed", "queued", facts(reviewed_at_head: true, followup_due: true), NOW)
+    assert pr["followup_at"]
+  end
+
+  def test_filing_clears_the_followup
+    pr = entry("verdict-ready", followup_at: "2026-11-13T17:00:00Z")
+    ReviewDesk::Desk.new(username: "rwc9u").send(:enter_state, pr, "verdict-ready", "filed", facts, NOW)
+    refute pr.key?("followup_at")
+  end
+
+  def followup_pr(reviews: [], comments: [])
+    {
+      "headRefOid" => "abc",
+      "reviews" => { "nodes" => reviews },
+      "comments" => { "nodes" => comments },
+    }
+  end
+
+  def review(login, state, at, type: "User")
+    { "author" => { "__typename" => type, "login" => login }, "state" => state, "submittedAt" => at,
+      "commit" => { "oid" => "abc" }, }
+  end
+
+  def followup_for(pr)
+    mine = pr.dig("reviews", "nodes").select { |r| r.dig("author", "login") == "rwc9u" }
+    ReviewDesk::Desk.new(username: "rwc9u").send(:followup, pr, mine)
+  end
+
+  def test_author_reply_after_your_comment_review_is_due
+    pr = followup_pr(reviews: [review("rwc9u", "COMMENTED", "2026-11-13T16:47:29Z"),
+                               review("amiryala3", "COMMENTED", "2026-11-13T18:00:00Z"),])
+    assert followup_for(pr)[:followup_due]
+  end
+
+  def test_pr_comment_after_your_review_is_due
+    pr = followup_pr(reviews: [review("rwc9u", "CHANGES_REQUESTED", "2026-11-13T16:47:29Z")],
+                     comments: [{ "author" => { "login" => "amiryala3" }, "createdAt" => "2026-11-13T18:00:00Z" }])
+    assert followup_for(pr)[:followup_due]
+  end
+
+  def test_reply_after_your_approval_is_not_due
+    pr = followup_pr(reviews: [review("rwc9u", "APPROVED", "2026-11-13T16:47:29Z"),
+                               review("amiryala3", "COMMENTED", "2026-11-13T18:00:00Z"),])
+    refute followup_for(pr)[:followup_due]
+  end
+
+  def test_bot_comment_after_your_review_is_not_due
+    pr = followup_pr(reviews: [review("rwc9u", "COMMENTED", "2026-11-13T16:47:29Z"),
+                               review("coderabbitai", "COMMENTED", "2026-11-13T18:00:00Z", type: "Bot"),])
+    refute followup_for(pr)[:followup_due]
+  end
+
+  def test_your_answer_ends_the_followup
+    pr = followup_pr(reviews: [review("rwc9u", "COMMENTED", "2026-11-13T16:47:29Z"),
+                               review("amiryala3", "COMMENTED", "2026-11-13T18:00:00Z"),
+                               review("rwc9u", "COMMENTED", "2026-11-13T18:30:00Z"),])
+    result = followup_for(pr)
+    refute result[:followup_due]
+    assert_equal "2026-11-13T18:30:00Z", result[:last_touch_at]
+  end
+
   def test_bot_reviews_do_not_take_a_pr
     desk = ReviewDesk::Desk.new(username: "rwc9u")
     desk.instance_variable_set(:@my_teams, [])

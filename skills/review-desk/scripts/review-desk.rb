@@ -7,7 +7,7 @@
 # Usage:
 #   review-desk.sh watch [--interval 300] [--max-concurrent 3] [--team SLUG]...
 #   review-desk.sh tick [--dry-run] [--team SLUG]...
-#   review-desk.sh start <owner/repo#n | repo#n | n | PR URL> | --all
+#   review-desk.sh start [--again] <owner/repo#n | repo#n | n | PR URL> | --all
 #   review-desk.sh dismiss|undismiss <owner/repo#n | repo#n | n | PR URL>
 #   review-desk.sh prepare <owner/repo#n>
 #   review-desk.sh prune [--yes]
@@ -42,6 +42,7 @@ module ReviewDesk
   SCRIPT_PATH = File.expand_path("~/.claude/skills/review-desk/scripts/review-desk.rb")
   WRAPPER_PATH = File.join(File.dirname(SCRIPT_PATH), "review-desk.sh")
   RETENTION_SECONDS = 24 * 3600
+  FOLLOWUP_WINDOW_SECONDS = 14 * 86_400
   DEFAULT_PORT = 47_321
 
   ACTIVE_STATES = %w[queued start-requested reviewing verdict-ready no-checkout].freeze
@@ -54,7 +55,7 @@ module ReviewDesk
     "start-requested" => ["Starting", "start clicked; opens a review tab when a slot frees"],
     "reviewing" => ["Reviewing", "/review-pr is running in its tab"],
     "verdict-ready" => ["Verdict ready", "review done; read the verdict and file it from the tab"],
-    "filed" => ["Filed", "your review is on GitHub; a new push sends it back to Queued"],
+    "filed" => ["Filed", "your review is on GitHub; a new push or a reply sends it back to Queued"],
     "taken" => ["Taken", "a teammate reviewed it for the team"],
     "dropped" => ["Dropped", "closed, merged, back to draft, or request withdrawn"],
     "dismissed" => ["Dismissed", "you skipped it; stays hidden through new pushes until undismissed"],
@@ -62,7 +63,7 @@ module ReviewDesk
   }.freeze
 
   Facts = Struct.new(
-    :open, :requested, :head_sha, :reviewed_at_head, :taken_by, :checkout,
+    :open, :requested, :head_sha, :reviewed_at_head, :taken_by, :checkout, :followup_due, :last_touch_at,
     keyword_init: true,
   )
 
@@ -74,7 +75,7 @@ module ReviewDesk
       state = entry && entry["state"]
       return(state && closed(state, facts)) unless facts.open
       return state if state == "dismissed"
-      return "filed" if facts.reviewed_at_head && (state || facts.requested)
+      return "filed" if facts.reviewed_at_head && !awaiting_you?(entry, facts) && (state || facts.requested)
       return(facts.requested ? arrival(facts) : nil) if state.nil?
 
       case state
@@ -83,6 +84,8 @@ module ReviewDesk
 
         facts.head_sha != entry["review_head"] ? "queued" : state
       when "filed"
+        return "queued" if facts.followup_due
+
         facts.requested && facts.head_sha != entry["review_head"] ? "queued" : state
       when "reviewing"
         return "verdict-ready" if verdict_ready
@@ -96,6 +99,15 @@ module ReviewDesk
       else
         facts.requested ? arrival(facts) : state
       end
+    end
+
+    # A reply since your review, or a follow-up you started, holds a reviewed PR open until you next respond.
+    def awaiting_you?(entry, facts)
+      facts.followup_due || (entry&.dig("followup_at") && facts.last_touch_at.to_s < entry["followup_at"]) || false
+    end
+
+    def followup_window?(entry, now)
+      entry["state_changed_at"] && now - Time.parse(entry["state_changed_at"]) < FOLLOWUP_WINDOW_SECONDS
     end
 
     def request_start(entry)
@@ -156,7 +168,9 @@ module ReviewDesk
 
     # Mixed requests get the general review; only a migration-team-only request gets the migration review.
     def review_prompt(entry)
-      if !entry["direct"] && entry["teams"] == [MIGRATION_TEAM]
+      if entry["followup_at"]
+        "/review-pr #{entry["number"]} low --desk --followup"
+      elsif !entry["direct"] && entry["teams"] == [MIGRATION_TEAM]
         "/review-migration-pr #{entry["number"]} --desk"
       else
         "/review-pr #{entry["number"]} low --desk"
@@ -193,7 +207,7 @@ module ReviewDesk
       reasons = []
       reasons << :bot if entry["bot"] && !filters["show_bots"]
       max_age = filters["max_age_days"]
-      aged = max_age && !entry["manual"] && entry["created_at"]
+      aged = max_age && !entry["manual"] && !entry["followup_at"] && entry["created_at"]
       reasons << :age if aged && now - Time.parse(entry["created_at"]) > max_age * 86_400
       reasons
     end
@@ -351,6 +365,8 @@ module ReviewDesk
       reviewRequests(first: 30) { nodes { requestedReviewer {
         __typename ... on User { login } ... on Team { slug organization { login } } } } }
       latestReviews(first: 30) { nodes { author { __typename login } state submittedAt commit { oid } } }
+      reviews(last: 30) { nodes { author { __typename login } state submittedAt commit { oid } } }
+      comments(last: 30) { nodes { author { __typename login } createdAt } }
     GRAPHQL
     GRAPHQL_CHUNK = 25
 
@@ -404,15 +420,16 @@ module ReviewDesk
       !fetched.nil?
     end
 
-    def start(targets, all: false)
+    def start(targets, all: false, again: false)
       return start_all if all
 
       snapshot = load_state["prs"]
       targets.each do |target|
         url_key = Transition.parse_target(target)
         tracked = tracked_key(snapshot, target)
-        if url_key && (!tracked || DONE_STATES.include?(snapshot.dig(tracked, "state")))
-          puts start_manual(tracked || url_key)
+        done = !tracked || DONE_STATES.include?(snapshot.dig(tracked, "state"))
+        if (url_key || (again && tracked)) && done
+          puts start_manual(tracked || url_key, again: again)
         elsif tracked
           puts start_one(tracked).first
         end
@@ -572,7 +589,7 @@ module ReviewDesk
     end
 
     # Untracked or finished PRs started from a link; a key a tick has since made active falls back to start_one.
-    def start_manual(key)
+    def start_manual(key, again: false)
       @filters = filters
       @my_teams ||= load_state["my_teams"] || []
       raw = begin
@@ -584,7 +601,10 @@ module ReviewDesk
 
       reason = closed_reason(raw[:pr])
       return "#{raw[:repo].split("/").last}##{raw[:pr]["number"]} is #{reason}; not starting it." if reason
-      return "You already reviewed #{key} at its current head; not starting it." if raw[:reviewed_at_head]
+      if raw[:reviewed_at_head] && !raw[:followup_due] && !again
+        return "You already reviewed #{key} at its current head and nobody has replied since; " \
+               "`start --again` reopens it as a follow-up."
+      end
 
       key = Transition.parse_target(raw[:pr]["url"]) || key
       facts = build_facts(raw, false, manual: true)
@@ -596,6 +616,7 @@ module ReviewDesk
         entry = state["prs"][key] = Transition.adopt_manual(old, key, now)
         refresh_entry(entry, raw, facts, nil)
         enter_state(entry, entry["state"], Transition.arrival(facts), facts, now)
+        entry["followup_at"] ||= now.iso8601 if raw[:reviewed_at_head]
         started = mark_start(entry)
         spawn_and_render(state, now)
         next "Started #{short_ref(entry)} (#{start_outcome(entry)})." if started
@@ -664,11 +685,15 @@ module ReviewDesk
     def enter_state(entry, old_state, new_state, facts, now)
       entry.delete("last_error")
       entry["remove_worktree"] = true if DONE_STATES.include?(new_state) && entry["spawned_at"]
+      entry.delete("followup_at") if DONE_STATES.include?(new_state)
       case new_state
       when "queued"
         retire_verdict(entry) if %w[verdict-ready filed].include?(old_state)
         entry.delete("surface")
         entry.delete("remove_worktree")
+        if !facts.reviewed_at_head then entry.delete("followup_at")
+        elsif facts.followup_due then entry["followup_at"] ||= now.iso8601
+        end
         entry["last_error"] = TAB_CLOSED_ERROR if old_state == "reviewing"
       when "verdict-ready"
         entry["review_head"] = verdict_head(entry) || entry["review_head"]
@@ -703,7 +728,9 @@ module ReviewDesk
     def build_facts(raw, in_search, manual: false)
       pr = raw[:pr]
       counted = teams_filter.empty? || raw[:direct] || raw[:teams].intersect?(teams_filter)
-      requested = Transition.requested?(in_search: in_search, manual: manual, draft: pr["isDraft"], counted: counted)
+      requested = Transition.requested?(
+        in_search: in_search, manual: manual || raw[:followup_due], draft: pr["isDraft"], counted: counted,
+      )
       Facts.new(
         open: pr["state"] == "OPEN",
         requested: requested,
@@ -711,6 +738,8 @@ module ReviewDesk
         reviewed_at_head: raw[:reviewed_at_head],
         taken_by: raw[:taken_by],
         checkout: Dir.exist?(checkout_dir(raw[:repo])),
+        followup_due: raw[:followup_due],
+        last_touch_at: raw[:last_touch_at],
       )
     end
 
@@ -778,8 +807,11 @@ module ReviewDesk
     end
 
     def fetch_facts(candidates, entries)
-      # An open tab keeps a done PR fetched, so filing from it is still seen.
-      tracked = entries.select { |_, e| ACTIVE_STATES.include?(e["state"]) || e["surface"] }.keys
+      # An open tab keeps a done PR fetched, so filing from it is still seen; filed PRs stay fetched to catch replies.
+      now = Time.now.utc
+      tracked = entries.select do |_, e|
+        ACTIVE_STATES.include?(e["state"]) || e["surface"] || (e["state"] == "filed" && Transition.followup_window?(e, now))
+      end.keys
       keys = (candidates.keys + tracked).uniq
       keys.each_slice(GRAPHQL_CHUNK).each_with_object({}) do |chunk, facts|
         facts.merge!(fetch_chunk(chunk))
@@ -826,7 +858,22 @@ module ReviewDesk
         teams: (mine.empty? ? team_requests : mine).map { |t| t["slug"] },
         reviewed_at_head: mine_reviews.any? { |r| r.dig("commit", "oid") == pr["headRefOid"] },
         taken_by: latest_other && "#{latest_other.dig("author", "login")} (#{review_state_label(latest_other)})",
+        **followup(pr, mine_reviews),
       }
+    end
+
+    # Thread replies arrive as reviews, so reviews plus PR comments cover every reply; an approval of this head ends it.
+    def followup(pr, mine_reviews)
+      reviews = pr.dig("reviews", "nodes").to_a.reject { |r| r["state"] == "PENDING" }
+      events = reviews.map { |r| [r["author"], r["submittedAt"]] } +
+               pr.dig("comments", "nodes").to_a.map { |c| [c["author"], c["createdAt"]] }
+      mine, others = events.partition { |author, _| author&.dig("login")&.casecmp?(username) }
+      last_touch = (mine.map(&:last) + mine_reviews.map { |r| r["submittedAt"] }).compact.max
+      last_other = others.reject { |author, _| Transition.bot_author?(author) }.map(&:last).compact.max
+      approved = (reviews.select { |r| r.dig("author", "login")&.casecmp?(username) } + mine_reviews)
+        .any? { |r| r["state"] == "APPROVED" && r.dig("commit", "oid") == pr["headRefOid"] }
+
+      { last_touch_at: last_touch, followup_due: !approved && !!last_touch && !!last_other && last_other > last_touch }
     end
 
     def review_state_label(review)
@@ -1330,10 +1377,11 @@ module ReviewDesk
     def start_cell(entry)
       return "waiting for a slot" if entry["state"] == "start-requested"
 
-      failed = " · last try failed (#{cell(entry["last_error"])})" if entry["last_error"]
-      return "`review-desk.rb start #{short_ref(entry)}`#{failed}" unless @listener_info
+      note = " · last try failed (#{cell(entry["last_error"])})" if entry["last_error"]
+      note = " · follow-up#{note}" if entry["followup_at"]
+      return "`review-desk.sh start #{short_ref(entry)}`#{note}" unless @listener_info
 
-      "[start](#{start_url(@listener_info, "/start/#{entry["repo"]}/#{entry["number"]}")})#{failed}"
+      "[start](#{start_url(@listener_info, "/start/#{entry["repo"]}/#{entry["number"]}")})#{note}"
     end
 
     def verdict_cell(entry)
@@ -1485,6 +1533,7 @@ if __FILE__ == $PROGRAM_NAME
       options[:dry_run] = true
     end
     opts.on("--all", "start: every queued PR") { options[:all] = true }
+    opts.on("--again", "start: reopen a PR you already reviewed as a follow-up") { options[:again] = true }
     opts.on("--yes", "prune: actually remove the worktrees") { options[:yes] = true }
     opts.on("-h", "--help", "Show this help") do
       puts opts
@@ -1507,7 +1556,7 @@ if __FILE__ == $PROGRAM_NAME
   when "tick" then desk.tick
   when "start"
     abort "start needs a PR reference, a PR URL, or --all" if ARGV.empty? && !options[:all]
-    desk.start(ARGV, all: options[:all] || false)
+    desk.start(ARGV, all: options[:all] || false, again: options[:again] || false)
   when "dismiss", "undismiss"
     abort "#{command} needs a PR reference or a PR URL" if ARGV.empty?
     ARGV.each { |target| puts desk.public_send(command, target) }

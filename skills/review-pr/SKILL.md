@@ -1,7 +1,7 @@
 ---
 name: review-pr
 description: This skill should be used when the user asks to "review this PR", "review PR <number>", "give me a verdict on this PR", "should I approve this", "act as the reviewer", "review and approve", or wants a reviewer's approve/request-changes recommendation on a pull request they are reviewing (not authoring). Do NOT use when the user wants a raw findings scan (use the built-in code-review skill) or wants to triage existing PR comments (use pr-feedback-triage).
-argument-hint: "[pr-number] [low|medium|high|xhigh|max] [--file] [--desk]"
+argument-hint: "[pr-number] [low|medium|high|xhigh|max] [--file] [--desk] [--followup]"
 model: opus
 ---
 
@@ -28,6 +28,8 @@ All arguments are optional and may be combined in any order:
   second confirmation prompt. Without this flag, always ask before filing.
 - `--desk` — the review desk launched this session. Write the verdict file in
   step 5 and run the desk commands in step 6.
+- `--followup` — the user already reviewed this PR and wants to answer what
+  came after it. Run [Follow-up](#follow-up) instead of steps 2–4.
 
 ## Process
 
@@ -38,8 +40,8 @@ Run in parallel:
 - `gh pr view <number>` for the description, author, state, and base branch
 - `gh pr view <number> --comments` for existing review activity
 
-Skip the deep review and say so if the PR is closed, merged, or the user
-already filed a review on it. If the PR is stacked (base branch is not the
+Skip the deep review and say so if the PR is closed, merged, or (without
+`--followup`) the user already filed a review on it. If the PR is stacked (base branch is not the
 default branch), note it — the verdict should mention that base PRs need
 review first.
 
@@ -85,6 +87,26 @@ with intent `other`), and load `artifact-diagramming` for the visual.
 - On a re-review, if an earlier verdict file for this PR (including a stale
   `<owner>-<repo>-<number>-<sha>.md`) has an `artifact:` line, read that
   artifact and publish to its URL instead of creating a new one
+
+### Follow-up
+
+With `--followup`, skip the scan and the explainer and work from the
+conversation since the user's last review:
+
+- Fetch the user's reviews and comments, plus every reply and PR comment after
+  them: `gh api repos/<owner>/<repo>/pulls/<number>/reviews`, `.../pulls/<number>/comments`
+  (threads via `in_reply_to_id`), and `.../issues/<number>/comments`, each with `--paginate`
+- For each point the user raised, decide whether it is fixed, answered, or still open.
+  When the author names a fix commit, check that commit's diff before calling it fixed
+- Ignore bot comments unless the author's reply depends on one
+- Recommend Approve, Approve with comments, or Request changes, as in step 3, and
+  draft a short reply for each thread that needs one
+- For the verdict file's `artifact:` line, reuse the earlier explainer from the
+  previous verdict file (including a stale `<owner>-<repo>-<number>-<sha>.md`)
+
+Then continue with steps 5 and 6. Filing a follow-up means posting the drafted
+replies (each starting with the preamble) and, when the recommendation changed,
+the new review.
 
 ### 5. Report to the user
 
