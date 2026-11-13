@@ -147,10 +147,15 @@ Format your review as:
 - [ ] Tests adequate
 
 ### Recommendation
-**[APPROVE / REQUEST CHANGES / NEEDS DISCUSSION]**
+**[APPROVE / COMMENT / REQUEST CHANGES / NEEDS DISCUSSION]**
 
 [Explanation of recommendation]
 ```
+
+Use COMMENT for blocking issues by default. Reserve REQUEST CHANGES for a
+serious case: data loss, a table lock or rewrite likely to cause an outage on
+a busy table, or a broken GUARDRAIL rule such as an unsafe column drop.
+File a COMMENT as an `event=COMMENT` review, as in the `review-pr` skill's step 6.
 
 ### 10. Publish a PR Explainer
 
@@ -163,7 +168,7 @@ summary. For a migration, the visual should show the schema before → after
 
 When the arguments include `--desk`, also write the review summary to
 `~/.local/state/review-desk/verdicts/<owner>-<repo>-<number>.md` (create the directory if needed).
-Line 1 is `verdict: <Approve|Request changes|Needs discussion>`, line 2 is
+Line 1 is `verdict: <Approve|Comment|Request changes|Needs discussion>`, line 2 is
 `head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
 URL>`, then the summary. Do not file a
 review on GitHub unless the user asks. After filing one, run

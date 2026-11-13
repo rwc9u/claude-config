@@ -8,7 +8,7 @@ model: opus
 # Review Pull Request
 
 Act as the reviewer for a pull request and produce a reviewer's verdict —
-Approve, Approve with comments, or Request changes — not a fix-it list for the
+Approve, Approve with comments, Comment, or Request changes — not a fix-it list for the
 author. The user is reviewing someone else's change; never apply fixes to the
 working tree.
 
@@ -64,8 +64,16 @@ Weigh each finding as a reviewer, not an author:
 - Judge findings against the PR's stated intent — behavior the PR pins with
   specs, explains in its description, or defers to a named follow-up ticket
   is a decision, not a defect
-- Conclude with exactly one recommendation: **Approve**, **Approve with
-  comments**, or **Request changes**, plus one or two sentences of rationale
+- Conclude with exactly one recommendation, plus one or two sentences of rationale:
+  - **Approve** — nothing to raise
+  - **Approve with comments** — only non-blocking items
+  - **Comment** — the default when there are blocking items: raise them
+    without approving or requesting changes. Our teams reserve a formal
+    request for changes for serious cases
+  - **Request changes** — only for a serious case: an exploitable security
+    hole, data loss or corruption, a likely production outage, or a broken
+    GUARDRAIL rule such as an unsafe column drop. A bug that fails CI, breaks
+    `main`, or is a one-line fix is a Comment, not this
 
 ### 4. Publish a PR explainer
 
@@ -99,7 +107,7 @@ conversation since the user's last review:
 - For each point the user raised, decide whether it is fixed, answered, or still open.
   When the author names a fix commit, check that commit's diff before calling it fixed
 - Ignore bot comments unless the author's reply depends on one
-- Recommend Approve, Approve with comments, or Request changes, as in step 3, and
+- Recommend a verdict as in step 3, and
   draft a short reply for each thread that needs one
 - For the verdict file's `artifact:` line, reuse the earlier explainer from the
   previous verdict file (including a stale `<owner>-<repo>-<number>-<sha>.md`)
@@ -115,7 +123,7 @@ non-blocking items. Keep it tight — this is for the human reviewer to act on.
 
 With `--desk`, also write the report to
 `~/.local/state/review-desk/verdicts/<owner>-<repo>-<number>.md` (create the directory if needed).
-Line 1 is `verdict: <Approve|Approve with comments|Request changes>`, line 2 is
+Line 1 is `verdict: <Approve|Approve with comments|Comment|Request changes>`, line 2 is
 `head: <full 40-character head SHA reviewed>`, line 3 is `artifact: <explainer
 URL>`, then the report.
 
@@ -131,6 +139,11 @@ Only after explicit confirmation (or when `--file` was passed):
   `comments[]` entry (`path`, `line`, `body`) per item. Start each comment body
   with `> 🤖 Posted by Claude on behalf of Rob.` and a blank line. Use
   `event=COMMENT` instead when approval isn't yours to give
+- **Comment**: one `event=COMMENT` review with each blocking item as an inline
+  comment on its line (preamble on each, same `comments[]` shape as above).
+  Put an item with no line to anchor to in the review body, starting with the
+  preamble; otherwise leave the body empty. Leave non-blocking items out unless
+  the user wants them
 - **Request changes**: `gh pr review <number> --request-changes` with a body
   of the blocking items, starting with `> 🤖 Posted by Claude on behalf of Rob.`
   and a blank line; leave non-blocking items out unless the user wants them
