@@ -1,0 +1,257 @@
+# Sites used to answer "what's on in Denver tonight", with what each one gave us.
+# URLs may contain strftime tokens (%Y, %m, %d); scripts/list_sources.rb fills them in.
+#
+# fetch:  ok       page loads with a plain fetch and carries dated listings
+#         partial  loads, but dates lack a year, or the schedule is incomplete/stale
+#         blocked  403/404/empty/JS-rendered; needs a browser or a different source
+# Last verified: 2026-11-19
+
+concert_listings:
+  - name: do303 live music by date
+    url: https://do303.com/events/live-music/%Y/%m/%d
+    fetch: ok
+    notes: Best single page for one night. Aggregator, so confirm headliners at the venue.
+  - name: 303.show month view
+    url: https://303.show/month/%Y-%m
+    fetch: ok
+    notes: Widest small-venue coverage (dive bars, DIY rooms). Aggregator; includes non-music events.
+  - name: Z2 Entertainment
+    url: https://z2ent.com/events
+    fetch: ok
+    notes: Promoter page covering Fox Theatre, Boulder Theater and Aggie Theatre, whose own sites 404.
+  - name: Live Nation artist pages
+    url: https://www.livenation.com
+    fetch: ok
+    notes: Artist event pages load and confirmed a Summit Music Hall show. Venue pages are JS-rendered.
+  - name: JamBase Denver area
+    url: https://www.jambase.com/concerts/us-co/denver
+    fetch: blocked
+    notes: Loads but returns "no concerts match"; useful through search snippets only.
+  - name: Denver Drop month page
+    url: https://denverdrop.com/months/denver-events-november-2026
+    fetch: partial
+    notes: Seen via search snippets only; month slug changes.
+
+concert_venues:
+  - { name: "Cervantes' Masterpiece / Other Side", url: "https://www.cervantesmasterpiece.com/events/", fetch: ok }
+  - { name: Larimer Lounge, url: "https://larimerlounge.com/", fetch: ok, notes: "Also lists Campground and Treehouse rooms." }
+  - { name: Lost Lake Lounge, url: "https://lost-lake.com/", fetch: ok }
+  - { name: Globe Hall, url: "https://globehall.com/", fetch: ok }
+  - { name: HQ, url: "https://www.hqdenver.com/", fetch: ok, notes: "Shows prices." }
+  - { name: Meow Wolf Denver, url: "https://tickets.meowwolf.com/events/denver/", fetch: ok }
+  - { name: Newman Center, url: "https://newmancenterpresents.com/", fetch: ok }
+  - { name: Swallow Hill, url: "https://swallowhillmusic.org/concerts/", fetch: partial, notes: "No show times on the listing." }
+  - { name: Nocturne, url: "https://nocturnejazz.com/music", fetch: partial, notes: "No set times." }
+  - { name: Dazzle, url: "https://www.dazzledenver.com/", fetch: partial, notes: "No show times." }
+  - { name: "Herb's", url: "https://www.herbsbar.com/live-music-calendar-1", fetch: ok }
+  - { name: Appaloosa Grill, url: "https://www.appaloosagrill.com/", fetch: ok }
+  - { name: Hi-Dive, url: "https://hi-dive.com/", fetch: ok, notes: "Homepage and ticket link can disagree on support acts." }
+  - { name: "Ophelia's Electric Soapbox", url: "http://opheliasdenver.com/", fetch: ok, notes: "Use to cross-check aggregator listings; it contradicted one." }
+  - { name: Grizzly Rose, url: "http://grizzlyrose.com/events/", fetch: ok }
+  - { name: Number Thirty Eight, url: "https://www.nmbr38.com/", fetch: ok }
+  - { name: Paramount Theatre (Ticketmaster), url: "https://www.ticketmaster.com/paramount-theatre-tickets-denver/venue/245776", fetch: ok, notes: "paramountdenver.com itself renders empty." }
+  - { name: Levitt Pavilion, url: "https://www.levittdenver.org/", fetch: partial, notes: "Seasonal; no events off-season." }
+  - { name: Skylark Lounge, url: "https://skylarklounge.com/schedule", fetch: partial, notes: "Schedule stale (stopped at March 2024)." }
+  - { name: Mission Ballroom, url: "https://www.missionballroom.com/events", fetch: blocked, notes: "AEG site, 403. AXS venue page also 403 (axs.com/venues/124710/mission-ballroom-denver-tickets)." }
+  - { name: Gothic Theatre, url: "https://www.gothictheatre.com/events", fetch: blocked, notes: "AEG site, 403; AXS event pages also 403." }
+  - { name: Bluebird Theater, url: "https://www.bluebirdtheater.net/events", fetch: blocked, notes: "AEG site, 403." }
+  - { name: Ogden Theatre, url: "https://www.ogdentheatre.com/events", fetch: blocked, notes: "AEG site, JS-rendered, came back empty." }
+  - { name: Fillmore Auditorium, url: "https://www.fillmoreauditorium.org/shows", fetch: blocked, notes: "404." }
+  - { name: Summit Music Hall, url: "https://www.summitdenver.com/shows", fetch: blocked, notes: "JS-rendered. Live Nation artist pages load; the venue page does not." }
+  - { name: Marquis Theater, url: "https://app.discotech.me/", fetch: partial, notes: "No working venue URL found; shows were confirmed only via do303, 303.show and Discotech event pages." }
+  - { name: Roxy Theatre, url: "https://theroxydenver.com/calendar", fetch: blocked, notes: "JS-rendered." }
+  - { name: Ball Arena, url: "https://www.ballarena.com/events", fetch: blocked, notes: "404; schedule came from search snippets only." }
+  - { name: Fox Theatre, url: "https://www.foxtheatre.com/events", fetch: blocked, notes: "404; use z2ent.com/events." }
+  - { name: Boulder Theater, url: "https://www.bouldertheater.com/events", fetch: blocked, notes: "404; use z2ent.com/events." }
+# No working site found for: Bar 404, Roxy on Broadway, Black Buzzard, Your Mom's House,
+# Herman's Hideaway. The domains tried were guesses; find the real ones before checking.
+
+brewery_rosters:
+  - name: Colorado Brewery List
+    url: https://www.coloradobrewerylist.com/
+    fetch: partial
+    notes: Best roster. Use the per-city pages and filter by street address; carries closure dates, but also address-less "in planning" entries to drop.
+  - name: Denver Beer Trail (Visit Denver)
+    url: https://www.denver.org/food-drink/breweries/
+    fetch: ok
+    notes: Member breweries only, city of Denver.
+  - name: 5280 best breweries in Denver's suburbs
+    url: https://5280.com/best-breweries-in-denvers-suburbs/
+    fetch: ok
+    notes: Last updated Aug 2024, so several entries have closed.
+  - name: Westword list of every Denver brewery
+    url: https://www.westword.com/food-drink/how-many-breweries-does-denver-have-a-list-of-every-denver-brewery-9546998/
+    fetch: blocked
+    notes: 403 / paywalled body. Individual Westword closure articles are still useful.
+
+# Brewery sites visited on the last run, whether or not they had an event that night.
+# One section per agent batch.
+breweries_central:
+  - { name: Ratio Beerworks, area: RiNo, url: "https://ratiobeerworks.com/events/", fetch: ok, notes: "Dates lack a year. RiNo Sessions music, third Thursday monthly." }
+  - { name: Odell Five Points Brewhouse, area: Five Points, url: "https://www.odellbrewing.com/events/", fetch: ok, notes: "Fully dated; covers all Odell taprooms." }
+  - { name: River North Brewery, area: RiNo, url: "https://www.rivernorthbrewery.com/taproom-events", fetch: blocked, notes: "Needs a browser. Thursday trivia; month view shows no times." }
+  - { name: Bierstadt Lagerhaus, area: RiNo, url: "https://bierstadtlager.com/events/", fetch: blocked, notes: "Needs a browser. Ignore the daily Red Rocks shuttle listing." }
+  - { name: Black Shirt Brewing, area: RiNo, url: "https://blackshirtbrewingco.com/denver-black-shirt-brewing-co-events", fetch: ok, notes: "Thursday Jeopardy trivia." }
+  - { name: Woods Boss Brewing, area: Five Points, url: "https://www.woodsbossbrewing.com/events", fetch: blocked, notes: "Needs a browser. Fully dated." }
+  - { name: Cerebral Brewing, area: Congress Park, url: "https://cerebralbrewing.com/events/", fetch: ok, notes: "One page covers Congress Park and West Highland taprooms; check which." }
+  - { name: Our Mutual Friend, area: RiNo, url: "https://www.omfbeer.com/events", fetch: ok, notes: "Tockify feed." }
+  - { name: Wynkoop Brewing, area: LoDo, url: "https://wynkoop.com/calendar/", fetch: partial, notes: "Calendar stale since March 2026." }
+  - { name: Full Frame Beer, area: Ballpark, url: "https://www.fullframebeer.com/menu", fetch: blocked, notes: "Events tab, needs a browser. Former Jagged Mountain space." }
+  - { name: Left Hand RiNo, area: RiNo, url: "https://www.lefthandbrewing.com/events/left-hand-rino", fetch: ok }
+  - { name: Great Divide, area: RiNo, url: "https://greatdivide.com/events-releases/", fetch: partial, notes: "No dated listings. Only the 3040 Blake taproom remains." }
+  - { name: Spangalang Brewery, area: Five Points, url: "https://www.spangalangbrewery.com/events", fetch: partial, notes: "Events page empty." }
+  - { name: Vine Street Pub, area: Uptown, url: "https://www.mountainsunpub.com/events/", fetch: partial, notes: "Undated posters only." }
+  - { name: Reverence Brewing, area: City Park West, url: "https://reverencebrewingcompany.com/", fetch: partial, notes: "Nothing dated." }
+  - { name: Pints Pub, area: Golden Triangle, url: "https://www.pintspub.com/tasting-events.html", fetch: partial, notes: "No dates." }
+  - { name: BrewDog Denver, area: RiNo, url: "https://usa.brewdog.com/pages/bars/denver", fetch: partial, notes: "Daily specials only." }
+  - { name: "Westbound & Down Downtown", area: LoDo, url: "https://www.westboundanddown.com/downtown-denver", fetch: partial, notes: "Hours only; needs a browser." }
+  - { name: Denver ChopHouse, area: LoDo, url: "https://www.denverchophouse.com/", fetch: partial, notes: "No public events." }
+  - { name: 14er Brewing, area: RiNo, url: "http://14erbrewing.my.canva.site/", fetch: partial, notes: "Social-only." }
+  - { name: Oskar Blues Grill & Brew, area: LoDo, url: "https://www.oskarbluesfooderies.com/", fetch: blocked, notes: "Cloudflare; open status unconfirmed." }
+  - { name: Crazy Mountain Taproom, area: Capitol Hill, url: "https://crazymountaintaproomco.com/events", fetch: ok, notes: "1505 Ogden St. Friday open mic only." }
+  - { name: Blue Moon Sandlot Brewery, area: Ballpark, url: "https://mlb.com/rockies/ballpark/special-events/venue/sandlot-brewery", fetch: partial, notes: "No public calendar; offseason access unclear." }
+
+breweries_east_north:
+  - { name: Fiction Beer, area: East Colfax, url: "https://www.fictionbeer.com/", fetch: ok, notes: "Weekly listings only: Thursday trivia 7pm." }
+  - { name: Long Table Brewhouse, area: Park Hill, url: "https://www.lngtbl.com/", fetch: ok, notes: "Fully dated pages under /schedule-food-events/YYYY/M/D/; mostly food trucks." }
+  - { name: FlyteCo Tower, area: Central Park, url: "https://flytecotower.com/events", fetch: ok, notes: "Fully dated." }
+  - { name: Denver Beer Co, area: all taprooms, url: "https://denverbeerco.com/taprooms/south-downing/", fetch: ok, notes: "Per-taproom pages list dated events (also /taprooms/littleton/, /arvada-taproom/). Series pages often contradict the dates; treat as likely, not confirmed." }
+  - { name: 4 Noses Park Hill, area: Park Hill, url: "https://www.4nosesbrewing.com/park-hill-events", fetch: ok }
+  - { name: 4 Noses Broomfield, area: Broomfield, url: "https://www.4nosesbrewing.com/broomfield-events", fetch: ok }
+  - { name: Cohesion Brewing, area: Clayton, url: "https://www.cohesionbeer.com/taproom-calendar", fetch: ok, notes: "Fully dated." }
+  - { name: Danico Brewing, area: Far NE Denver, url: "https://www.danicobrewing.com/", fetch: ok, notes: "Events are in a monthly calendar PDF linked from the site." }
+  - { name: Bruz Beers Midtown, area: Adams County, url: "https://bruzbeers.com/eat/", fetch: ok, notes: "Food trucks by date, no year. Events at /events." }
+  - { name: Launch Pad Brewery, area: Aurora, url: "https://www.launchpadbrewery.com/new-events", fetch: ok, notes: "Dates lack a year." }
+  - { name: Second Dawn Brewing, area: Aurora, url: "https://www.seconddawnbrewing.com/clubs-and-weekly-events/", fetch: ok, notes: "Weekly listings only." }
+  - { name: Two22 Brew, area: Centennial, url: "https://www.two22brew.com/new-events-1", fetch: ok }
+  - { name: Windfall Brewing, area: Westminster, url: "https://windfallbrewing.co/events", fetch: partial, notes: "Weekly listings; page may be stale." }
+  - { name: Rails End Beer Co, area: Broomfield, url: "https://railsendbeerco.com/live-music/", fetch: ok, notes: "Live music and open mic; dates lack a year." }
+  - { name: Station 26, area: Park Hill, url: "https://www.station26brewing.co/events", fetch: ok }
+  - { name: Lowry Beer Garden, area: Lowry, url: "https://www.lowrybeergarden.com/calendar", fetch: ok, notes: "Beer garden, not a brewery." }
+  - { name: Cheluna, area: Aurora, url: "https://www.cheluna.com/events/", fetch: ok }
+  - { name: Frolic Brewing, area: Westminster, url: "https://www.frolicbrewing.com/upcoming-events", fetch: ok }
+  - { name: SomePlace Else, area: "Arvada, Broomfield and Thornton", url: "https://someplaceelse.beer/events/", fetch: ok, notes: "One calendar for all three taprooms." }
+  - { name: Satire Brewing, area: Thornton, url: "https://satirebrewingcompany.com/calendar", fetch: ok }
+  - { name: Floodstage Ale Works, area: Brighton, url: "https://floodstagealeworks.com/brighton-floodstage-ale-works-events", fetch: ok }
+  - { name: Bent Barley, area: Aurora, url: "https://www.bentbarley.com/events", fetch: partial, notes: "Calendar stale since Sep 2026." }
+  - { name: Milieu Fermentation, area: Aurora, url: "https://milieufc.com/events/", fetch: partial, notes: "Calendar stale since May 2026." }
+  - { name: The Circular Lounge (Knotted Root), area: East Colfax, url: "https://www.thecircularlounge.com/events", fetch: partial, notes: "Social-only." }
+  - { name: Kokopelli Beer Co, area: Westminster, url: "https://kokopellibeerco.com/events-calendar/", fetch: partial, notes: "Calendar unused." }
+  - { name: Big Choice / County Road Social, area: Brighton, url: "https://www.countyroadsocial.com/events", fetch: partial, notes: "Calendar widget not configured." }
+  - { name: Wanderment Brewing, area: Adams County, url: "https://www.wandermentbrewing.com/events", fetch: blocked, notes: "Rendered empty." }
+  - { name: Six Capital Brewing, area: Aurora, url: "https://sixcapitalbrewing.com/google-calendar/", fetch: blocked, notes: "Google Calendar embed." }
+  - { name: Westminster Brewing Co, area: Westminster, url: "https://www.webrewco.com/events", fetch: blocked, notes: "Site shows closed every day; status unclear." }
+  - { name: Wonderland Brewing, area: Broomfield, url: "https://www.wonderlandbrewing.com/calendar", fetch: blocked, notes: "JS calendar." }
+  - { name: Prost Brewing Northglenn, area: Northglenn, url: "https://prostbrewing.com/northglenn/", fetch: blocked, notes: "403." }
+  - { name: Something Brewery, area: Brighton, url: "https://www.somethingbrewery.com/foodtrucks", fetch: blocked, notes: "Rendered empty." }
+  - { name: "Bull & Bush", area: Glendale, url: "https://bullandbush.com/", fetch: partial, notes: "No events page." }
+  - { name: A Bit Twisted Brewpub, area: Aurora, url: "https://twistedbrewpub.com/", fetch: partial, notes: "No events." }
+
+breweries_south:
+  - { name: Monolith Brewing, area: Platt Park, url: "https://www.monolithbrewing.com/events", fetch: ok, notes: "Thursday team trivia 7pm. Dates lack a year." }
+  - { name: Black Sky Brewery, area: Baker, url: "https://blackskydenver.com/", fetch: ok, notes: "Heavy Metal Karaoke on the 3rd Thursday. Dates lack a year, no times." }
+  - { name: Novel Strand Brewing, area: Baker, url: "https://www.novelstrand.com/events", fetch: blocked, notes: "Script-rendered; read the Tockify feed (calendar nsbcevents) instead." }
+  - { name: Comet Brews, area: Littleton, url: "https://cometbrews.com/events/", fetch: ok, notes: "Fully dated. Thursday trivia 7pm. It is in Littleton, not Sunnyside." }
+  - { name: Littleton Brewing Co, area: Littleton, url: "https://www.littletonbrewco.com/events", fetch: ok, notes: "Fully dated." }
+  - { name: Zymos Brewing, area: Littleton, url: "https://www.zymosbrewing.com/events-1", fetch: ok, notes: "Themed trivia on the 3rd Thursday. Dates lack a year." }
+  - { name: Downhill Brewing, area: Greenwood Village and Parker, url: "https://www.downhillbrews.com/events", fetch: blocked, notes: "Script-rendered; read the raw HTML. One calendar for both taprooms." }
+  - { name: Lone Tree Brewing, area: Lone Tree, url: "https://lonetreebrewingco.com/", fetch: ok, notes: "Weekly lineup is an Instagram post embedded on the homepage." }
+  - { name: Lone Tree Brewing Parker, area: Parker, url: "https://lonetreebrewingco.com/locations/parker-brewery-location-events-tap-list/", fetch: ok }
+  - { name: Resolute Brewing, area: Centennial and Arvada, url: "https://resolutebrewingco.com/food-events/", fetch: blocked, notes: "Script-rendered; read the raw HTML. Both taprooms share the page, so check which." }
+  - { name: Platt Park Brewing, area: Platt Park, url: "https://www.plattparkbrewing.com/", fetch: ok, notes: "Recurring nights are Mon-Wed." }
+  - { name: Comrade Brewing, area: SE Denver, url: "https://comradebrewing.com/", fetch: ok }
+  - { name: Locavore Beer Works, area: Littleton, url: "https://www.locavorebeerworks.com/pages/calendar", fetch: partial, notes: "Undated specials only." }
+  - { name: Living the Dream, area: Highlands Ranch, url: "https://www.livingthedreambrewing.com/events.html", fetch: partial, notes: "Food-truck schedule does not render." }
+  - { name: Lariat Lodge Littleton, area: Littleton, url: "https://www.lariatlodgebrewing.com/", fetch: partial, notes: "No calendar." }
+  - { name: Great Divide Roadhouse, area: Lone Tree, url: "https://greatdivide.com/lone-tree/", fetch: partial, notes: "Hours only." }
+  - { name: Chain Reaction Brewing, area: Athmar Park, url: "https://www.chainreactionbrewingco.com/", fetch: partial, notes: "Stub site, social-only." }
+  - { name: Lady Justice Brewing, area: Englewood, url: "https://www.ladyjusticebrewing.com/", fetch: partial, notes: "Age gate and social links only." }
+  - { name: Public Offering Brewing, area: South Broadway, url: "https://www.publicofferingbrewing.com/events", fetch: blocked, notes: "Calendar is images." }
+  - { name: Brewability, area: Englewood, url: "https://brew-ability.com/", fetch: blocked, notes: "Eventbrite embed." }
+  - { name: Breckenridge Brewery Farm House, area: Littleton, url: "https://www.breckbrew.com/events", fetch: blocked, notes: "Empty shell." }
+  - { name: Coal Mine Ave Brewing, area: Littleton, url: "https://www.coalmineavebrewing.com/food-trucks-%%26-events", fetch: blocked, notes: "Calendar is one image." }
+  - { name: Spice Trade Brewing, area: Greenwood Village, url: "https://spicetradebrewing.com/", fetch: blocked, notes: "403." }
+  - { name: 3 Freaks Brewery, area: Highlands Ranch, url: "https://3freaksbrewery.com/", fetch: blocked, notes: "503." }
+  - { name: Prost Brewing Highlands Ranch, area: Highlands Ranch, url: "https://prostbrewing.com/locations/highlands-ranch/", fetch: blocked, notes: "403." }
+  - { name: Los Dos Potrillos Cerveceria, area: Parker, url: "https://www.los2potrillos.com/", fetch: blocked, notes: "403." }
+
+breweries_west:
+  - { name: Zuni Street Brewing, area: Highland, url: "https://www.zunistreet.com/food-trucks-and-events", fetch: ok, notes: "Monthly food-truck calendar; live music Wed/Sat only." }
+  - { name: Little Machine Beer, area: Jefferson Park, url: "https://www.littlemachinebeer.com/events", fetch: ok, notes: "Weekly listings: Thursday trivia 7pm." }
+  - { name: Hogshead Brewery, area: "Sloan's Lake", url: "https://hogshead54.com/denver-slohi-hogshead-brewery-calendar", fetch: ok, notes: "Fully dated; beer releases." }
+  - { name: Alley Brews, area: Berkeley, url: "https://alleybrews.com/", fetch: ok, notes: "Formerly De Steeg, 4342 Tennyson. Fully dated event pages under /denver-brewery-events/." }
+  - { name: "Odell Sloan's Lake Brewhouse", area: "Sloan's Lake", url: "https://www.odellbrewing.com/locations/sloans-lake-brewhouse/", fetch: ok }
+  - { name: Waldschanke Ciders, area: Sunnyside, url: "https://waldschankeciders.com/events", fetch: ok, notes: "Cidery. Weekly listings, no times." }
+  - { name: Joyride Brewing, area: Edgewater, url: "https://www.joyridebrewing.com/events", fetch: blocked, notes: "Needs a browser. Dates lack a year." }
+  - { name: 6 & 40 Brewery, area: Lakewood, url: "https://6and40brewery.com/event/trivia-night-2-2/%Y-%m-%d/", fetch: ok, notes: "Fully dated, one page per event; this is the Thursday trivia series." }
+  - { name: Green Mountain Beer Co, area: Lakewood, url: "https://www.greenmountainbeercompany.com/", fetch: ok, notes: "Embedded Google Calendar." }
+  - { name: Old 121 Brewhouse / Ye Olde 121, area: Lakewood, url: "https://www.old121brewhouse.com/events", fetch: blocked, notes: "Needs a browser. Two locations on one page; Thursday trivia at both." }
+  - { name: Odyssey Beerwerks, area: Arvada, url: "https://www.odysseybeerwerks.com/events", fetch: ok, notes: "Thursday vinyl night. Food-truck page renders empty." }
+  - { name: Savoie Brewing at Olde Town Social, area: Arvada, url: "https://oldetownsocial.com/calendar/", fetch: partial, notes: "Venue calendar, was a month stale." }
+  - { name: Mountain Toad Brewing, area: Golden, url: "https://www.mountaintoadbrewing.com/events", fetch: ok, notes: "Site timezone is Eastern, so displayed times run 2 hours late; confirm." }
+  - { name: Cannonball Creek, area: Golden, url: "https://www.cannonballcreekbrewing.com/calendar", fetch: ok }
+  - { name: Holidaily Brewing, area: Golden, url: "https://holidailybrewing.com/events/", fetch: ok, notes: "Fully dated; releases and food trucks." }
+  - { name: New Terrain Brewing, area: Golden, url: "https://newterrainbrewing.com/", fetch: ok, notes: "Fully dated event pages under /event/; regular live music (Music By The Mesa)." }
+  - { name: Coda Brewing, area: Golden, url: "https://codabrewing.com/", fetch: ok, notes: "Embedded Google Calendar." }
+  - { name: Cerveceria Colorado, area: LoHi, url: "https://www.cerveceriacolorado.com/events.html", fetch: ok }
+  - { name: Prost Brewing, area: Highland and Wheat Ridge, url: "https://www.prostbrewing.com/events", fetch: blocked, notes: "Needs a browser; one page for all Prost locations." }
+  - { name: The Empourium, area: Berkeley, url: "https://theempourium.com/denver-berkeley-the-empourium-brewing-company-events", fetch: ok }
+  - { name: Seedstock Brewery, area: West Colfax, url: "https://seedstockbrewery.com/calendar", fetch: ok, notes: "Dates lack a year." }
+  - { name: Strange Craft, area: Lincoln Park, url: "https://www.strangecraft.com/food-trucks-events", fetch: ok, notes: "Google Calendar." }
+  - { name: Diebolt Brewing, area: Sunnyside, url: "https://dieboltbrewing.com/", fetch: ok }
+  - { name: Crooked Stave, area: Sunnyside, url: "https://www.crookedstave.com/taproom-events", fetch: partial, notes: "Calendar stale since May 2026." }
+  - { name: WestFax Brewing, area: Lakewood, url: "https://www.westfaxbrewingcompany.com/lakewood-events", fetch: ok }
+  - { name: LandLocked Ales, area: Lakewood, url: "https://www.landlockedales.com/events-food-trucks", fetch: ok }
+  - { name: Paramount BeerWerks / The Werks, area: Wheat Ridge, url: "https://thewerkscolorado.com/wheat-ridge-events", fetch: ok }
+  - { name: "Barrels & Bottles", area: Golden, url: "https://www.barrelsbottles.com/livemusicevents", fetch: ok, notes: "Live music list." }
+  - { name: Mad Macks Brewing, area: Golden, url: "https://www.madmacksbrewing.com/event-list", fetch: ok }
+  - { name: Briar Common, area: Jefferson Park, url: "https://www.briarcommon.com/events", fetch: partial, notes: "No calendar. Reported last day Nov 22 2026." }
+  - { name: Grateful Gnome, area: Berkeley, url: "https://thegratefulgnome.com/calendar/", fetch: partial, notes: "Facebook embed." }
+  - { name: Barquentine Brewing, area: Edgewater, url: "https://www.barquentinebrewing.com/", fetch: partial, notes: "No calendar." }
+  - { name: Brewery Rickoli, area: Wheat Ridge, url: "https://www.breweryrickoli.com/", fetch: partial, notes: "No calendar." }
+  - { name: New Image Brewing, area: Wheat Ridge and Arvada, url: "https://www.nibrewing.com/", fetch: partial, notes: "No calendar." }
+  - { name: Golden City Brewery, area: Golden, url: "https://www.gcbrewery.com/currentevents", fetch: partial, notes: "Annual events only." }
+  - { name: Coors Brewery Tour, area: Golden, url: "https://www.coorsbrewerytour.com/", fetch: blocked, notes: "403." }
+
+# Skip these: confirmed closed as of the last run.
+closed_breweries:
+  - Jagged Mountain (2024, now Full Frame Beer)
+  - Rock Bottom 16th St (June 2026)
+  - Mockery Brewing (2023)
+  - Epic Brewing Denver (2022)
+  - Alpine Dog (2024)
+  - Tivoli Brewing taproom (2024)
+  - Blue Moon RiNo (2025)
+  - New Belgium at The Source (unconfirmed)
+  - Great Divide Ballpark taproom and Barrel Bar (2025)
+  - Dry Dock Aurora taproom (Jan 2026; now Dry Dock Pub, 1101 S Pearl)
+  - Ursula (2023, now Milieu)
+  - Peak to Peak Tap & Brew
+  - Pilothouse (2020)
+  - Mother Tucker (2025, now SomePlace Else Thornton)
+  - Periodic (2020)
+  - Burns Family Artisan Ales taproom (2025)
+  - Blue Tile
+  - Dos Luces (2023)
+  - Baere Brewing (Dec 2025)
+  - Banded Oak (2025)
+  - TRVE Broadway bar (2025)
+  - Copper Kettle (June 2026)
+  - Sanitas Englewood (2025)
+  - Wild Sky / Blue Spruce Littleton (2025)
+  - Halfpenny (2025)
+  - Peak View (2024, now Downhill Greenwood Village)
+  - Grist (2023, now Living the Dream)
+  - Welcome Home Brewery (2023)
+  - Barnett & Son (2024)
+  - Bodega Beer Co (2025)
+  - Hall Brewing taproom
+  - Call to Arms (Dec 2025)
+  - FlyteCo Tennyson (2025; FlyteCo Tower remains)
+  - Raices Brewing (2025)
+  - Goldspot Brewing
+  - Great Frontier (2025, now Old 121 Brewhouse)
+  - Colorado Plus (May 2026)
+  - LUKI Brewery (Nov 2026)
+  - Over Yonder (2025)
+  - Amalgam (no public taproom)
