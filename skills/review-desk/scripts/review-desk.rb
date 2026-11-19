@@ -106,6 +106,13 @@ module ReviewDesk
       facts.followup_due || (entry&.dig("followup_at") && facts.last_touch_at.to_s < entry["followup_at"]) || false
     end
 
+    # The custom cmux sidebar parses "<repo>#<n> <title>" to list reviews under the Reviews workspace.
+    def tab_title(entry)
+      title = entry["title"].to_s.strip
+      title = "#{title[0, 59]}…" if title.length > 60
+      "#{entry["repo"].split("/").last}##{entry["number"]} #{title}".strip
+    end
+
     def followup_window?(entry, now)
       entry["state_changed_at"] && now - Time.parse(entry["state_changed_at"]) < FOLLOWUP_WINDOW_SECONDS
     end
@@ -978,8 +985,7 @@ module ReviewDesk
       return warn("Could not open a review tab for #{entry["key"]}") unless result
 
       state["review_pane"] = result["pane_ref"]
-      tab = "#{entry["repo"].split("/").last}##{entry["number"]}"
-      cmux("rename-tab", "--workspace", workspace, "--surface", result["surface_ref"], tab)
+      cmux("rename-tab", "--workspace", workspace, "--surface", result["surface_ref"], Transition.tab_title(entry))
       result["surface_ref"]
     end
 

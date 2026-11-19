@@ -342,6 +342,16 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "filed", Transition.call(pr, facts(reviewed_at_head: true, last_touch_at: "2026-11-13T17:30:00Z"))
   end
 
+  def test_tab_title_carries_the_pr_title
+    pr = entry("queued", number: 61_943, repo: "Kajabi/kajabi-products", title: "Add the thing")
+    assert_equal "kajabi-products#61943 Add the thing", Transition.tab_title(pr)
+  end
+
+  def test_tab_title_truncates_long_pr_titles
+    pr = entry("queued", number: 1, repo: "Kajabi/terraform", title: "x" * 80)
+    assert_equal "terraform#1 #{"x" * 59}…", Transition.tab_title(pr)
+  end
+
   def test_followup_review_prompt
     pr = entry("queued", number: 50, teams: [ReviewDesk::MIGRATION_TEAM], followup_at: "2026-11-13T17:00:00Z")
     assert_equal "/review-pr 50 low --desk --followup", Transition.review_prompt(pr)
