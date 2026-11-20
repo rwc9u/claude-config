@@ -421,6 +421,30 @@ class ReviewDeskTransitionTest < Minitest::Test
     assert_equal "2026-11-13T18:30:00Z", result[:last_touch_at]
   end
 
+  def test_finishing_an_adopted_review_leaves_its_checkout_alone
+    pr = entry("reviewing", spawned_at: "2026-11-20T09:00:00Z", adopted: true)
+    ReviewDesk::Desk.new(username: "rwc9u").send(:enter_state, pr, "reviewing", "filed", facts, NOW)
+    refute pr.key?("remove_worktree")
+  end
+
+  def test_adopt_takes_over_a_reviewing_pr_whose_tab_is_gone
+    assert_nil Transition.adopt_refusal(entry("reviewing", surface: "surface:1"), "surface:2", ["surface:2"])
+  end
+
+  def test_adopt_refuses_a_pr_another_live_tab_is_reviewing
+    assert_match(/already being reviewed in surface:1/,
+                 Transition.adopt_refusal(entry("reviewing", surface: "surface:1"), "surface:2", %w[surface:1 surface:2]))
+  end
+
+  def test_adopt_refuses_when_tabs_cannot_be_listed
+    assert Transition.adopt_refusal(entry("reviewing", surface: "surface:1"), "surface:2", nil)
+  end
+
+  def test_adopt_accepts_an_untracked_or_queued_pr
+    assert_nil Transition.adopt_refusal(nil, "surface:2", [])
+    assert_nil Transition.adopt_refusal(entry("queued"), "surface:2", [])
+  end
+
   def test_bot_reviews_do_not_take_a_pr
     desk = ReviewDesk::Desk.new(username: "rwc9u")
     desk.instance_variable_set(:@my_teams, [])

@@ -1,7 +1,7 @@
 ---
 name: review-pr
 description: This skill should be used when the user asks to "review this PR", "review PR <number>", "give me a verdict on this PR", "should I approve this", "act as the reviewer", "review and approve", or wants a reviewer's approve/request-changes recommendation on a pull request they are reviewing (not authoring). Do NOT use when the user wants a raw findings scan (use the built-in code-review skill) or wants to triage existing PR comments (use pr-feedback-triage).
-argument-hint: "[pr-number] [low|medium|high|xhigh|max] [--file] [--desk] [--followup]"
+argument-hint: "[<n> | <repo>#<n> | <owner>/<repo>#<n> | <PR URL>] [low|medium|high|xhigh|max] [--file] [--desk] [--followup]"
 model: opus
 ---
 
@@ -16,7 +16,10 @@ working tree.
 
 All arguments are optional and may be combined in any order:
 
-- `<pr-number>` — the PR to review. If omitted, look for an open PR on the
+- `<pr>` — the PR to review: a number (in the current repo), `<repo>#<n>`
+  (owner `Kajabi`), `<owner>/<repo>#<n>`, or a PR URL. Resolve it to
+  `<owner>/<repo>#<n>` first and pass `-R <owner>/<repo>` to every `gh` call
+  when it isn't the current repo. If omitted, look for an open PR on the
   current branch with `gh pr view` and confirm the target with the user
   before reviewing.
 - `<effort-level>` — one of `low`, `medium`, `high`, `xhigh`, `max`; passed
@@ -28,6 +31,11 @@ All arguments are optional and may be combined in any order:
   second confirmation prompt. Without this flag, always ask before filing.
 - `--desk` — the review desk launched this session. Write the verdict file in
   step 5 and run the desk commands in step 6.
+
+Without `--desk`, when `CMUX_SURFACE_ID` is set, put the review on the desk
+before step 1: `~/.claude/skills/review-desk/scripts/review-desk.sh adopt <owner>/<repo>#<n>`.
+If it prints `Adopted`, continue as if `--desk` was passed; otherwise continue
+without it and mention the message.
 - `--followup` — the user already reviewed this PR and wants to answer what
   came after it. Run [Follow-up](#follow-up) instead of steps 2–4.
 

@@ -58,7 +58,12 @@ $DESK start --all                    # every queued PR
 A PR URL works for any open, non-draft PR, even one nobody requested from you
 or one already taken or dropped (filed too, once it has new commits or replies).
 `$DESK start --again <ref>` reopens a PR you already reviewed as a follow-up even
-when nobody has replied. It becomes a manual entry (Requested
+when nobody has replied.
+
+A `/review-pr` typed by hand in a cmux tab joins the desk itself: it runs
+`$DESK adopt <owner/repo#n>`, which tracks the PR as a manual review in that
+tab (reviewing, then verdict-ready and filed like any other). The desk closes
+that tab once the PR is filed or dismissed, but never removes its checkout. It becomes a manual entry (Requested
 shows `you (manual)`) that behaves like a direct request and ignores `max-age`.
 
 `start` marks the PRs `start-requested` and opens review tabs right away, without

@@ -9,6 +9,7 @@
 #   review-desk.sh tick [--dry-run] [--team SLUG]...
 #   review-desk.sh start [--again] <owner/repo#n | repo#n | n | PR URL> | --all
 #   review-desk.sh dismiss|undismiss <owner/repo#n | repo#n | n | PR URL>
+#   review-desk.sh adopt <owner/repo#n | PR URL>   (from inside a cmux tab running /review-pr)
 #   review-desk.sh prepare <owner/repo#n>
 #   review-desk.sh prune [--yes]
 #   review-desk.sh bots on|off|status
@@ -43,6 +44,7 @@ module ReviewDesk
   WRAPPER_PATH = File.join(File.dirname(SCRIPT_PATH), "review-desk.sh")
   RETENTION_SECONDS = 24 * 3600
   FOLLOWUP_WINDOW_SECONDS = 14 * 86_400
+  FULL_REF = %r{\A[\w.-]+/[\w.-]+#\d+\z}
   DEFAULT_PORT = 47_321
 
   ACTIVE_STATES = %w[queued start-requested reviewing verdict-ready no-checkout].freeze
@@ -111,6 +113,19 @@ module ReviewDesk
       title = entry["title"].to_s.strip
       title = "#{title[0, 59]}…" if title.length > 60
       "#{entry["repo"].split("/").last}##{entry["number"]} #{title}".strip
+    end
+
+    # Adopted reviews run in a checkout the user chose, so the desk never removes it.
+    def desk_worktree?(entry)
+      entry["spawned_at"] && !entry["adopted"]
+    end
+
+    # Another live tab already reviewing the PR keeps it; a tab that is gone, or this one, can take it over.
+    def adopt_refusal(entry, surface, live)
+      return unless entry && entry["state"] == "reviewing" && entry["surface"] && entry["surface"] != surface
+      return if live && !live.include?(entry["surface"])
+
+      "#{entry["key"]} is already being reviewed in #{entry["surface"]}; not adopting it."
     end
 
     def followup_window?(entry, now)
@@ -443,6 +458,53 @@ module ReviewDesk
       end
     end
 
+    # A /review-pr session started by hand joins the desk as a manual review in the tab it runs in.
+    def adopt(target)
+      key = Transition.parse_target(target) || (target if target.match?(FULL_REF)) ||
+            tracked_key(load_state["prs"], target)
+      return "Give adopt a PR URL or owner/repo#n." unless key
+
+      here = cmux_json("identify")&.dig("caller")
+      return "Not running in a cmux tab; nothing to adopt." unless here&.dig("surface_ref")
+
+      @filters = filters
+      @my_teams ||= load_state["my_teams"] || []
+      raw = begin
+        fetch_chunk([key])[key]
+      rescue GhError => e
+        return "Could not fetch #{key}: #{e.message}"
+      end
+      return "#{key} was not found on GitHub." unless raw
+
+      reason = closed_reason(raw[:pr])
+      return "#{key} is #{reason}; not adopting it." if reason
+
+      key = Transition.parse_target(raw[:pr]["url"]) || key
+      surface = here["surface_ref"]
+      entry = nil
+      message = locked do |state|
+        old = state["prs"][key]
+        refusal = Transition.adopt_refusal(old, surface, live_surfaces(state))
+        next refusal if refusal
+        next "#{key} is already on the desk in this tab." if old&.dig("surface") == surface
+
+        now = Time.now.utc
+        retire_verdict(old) if %w[verdict-ready filed].include?(old&.dig("state"))
+        entry = state["prs"][key] = ACTIVE_STATES.include?(old&.dig("state")) ? old : Transition.adopt_manual(old, key, now)
+        refresh_entry(entry, raw, build_facts(raw, false, manual: true), nil)
+        entry.delete("remove_worktree")
+        entry["followup_at"] ||= now.iso8601 if raw[:reviewed_at_head]
+        entry.merge!(
+          "state" => "reviewing", "surface" => surface, "review_head" => entry["head_sha"], "adopted" => true,
+          "spawned_at" => now.iso8601, "state_changed_at" => now.iso8601,
+        )
+        rerender(state)
+        "Adopted #{key} into the review desk; verdict file: #{verdict_path(entry)}"
+      end
+      cmux("rename-tab", "--workspace", here["workspace_ref"], "--surface", surface, Transition.tab_title(entry)) if entry
+      message
+    end
+
     # State is saved before the tab closes: dismiss may run from inside the tab it closes.
     # An unknown tab listing keeps the surface so the next tick closes it.
     def dismiss(target)
@@ -455,7 +517,7 @@ module ReviewDesk
         next "#{short_ref(entry)} is #{entry["state"]}; nothing to dismiss." if DONE_STATES.include?(entry["state"])
 
         entry.merge!("state" => "dismissed", "state_changed_at" => Time.now.utc.iso8601)
-        entry["remove_worktree"] = true if entry["spawned_at"]
+        entry["remove_worktree"] = true if Transition.desk_worktree?(entry)
         rerender(state)
         snapshot = state
         "Dismissed #{short_ref(entry)}; the dashboard updated."
@@ -691,7 +753,7 @@ module ReviewDesk
 
     def enter_state(entry, old_state, new_state, facts, now)
       entry.delete("last_error")
-      entry["remove_worktree"] = true if DONE_STATES.include?(new_state) && entry["spawned_at"]
+      entry["remove_worktree"] = true if DONE_STATES.include?(new_state) && Transition.desk_worktree?(entry)
       entry.delete("followup_at") if DONE_STATES.include?(new_state)
       case new_state
       when "queued"
@@ -969,6 +1031,7 @@ module ReviewDesk
           "state" => "reviewing", "surface" => surface, "review_head" => entry["head_sha"],
           "spawned_at" => now.iso8601, "state_changed_at" => now.iso8601,
         )
+        entry.delete("adopted")
       end
     end
 
@@ -1563,6 +1626,9 @@ if __FILE__ == $PROGRAM_NAME
   when "start"
     abort "start needs a PR reference, a PR URL, or --all" if ARGV.empty? && !options[:all]
     desk.start(ARGV, all: options[:all] || false, again: options[:again] || false)
+  when "adopt"
+    abort "adopt needs a PR URL or owner/repo#n" if ARGV.empty?
+    puts desk.adopt(ARGV.first)
   when "dismiss", "undismiss"
     abort "#{command} needs a PR reference or a PR URL" if ARGV.empty?
     ARGV.each { |target| puts desk.public_send(command, target) }
