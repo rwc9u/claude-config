@@ -72,6 +72,29 @@ Work from evidence, not from the job name.
 State the root cause in a sentence before fixing anything. If you cannot, say
 what you found and DM Rob instead of guessing at a fix.
 
+### How it got into main
+
+For every new red, also work out why the PR that introduced it merged green.
+This goes in the PR description (section 6), so verify it; do not guess.
+
+- Find the introducing PR (`git log` on the files, then `gh pr view <n>`), and
+  look at its last pipeline before merge: its labels, the workflow that ran
+  (`build_and_test` or `build_and_test_smart_selection`), and whether the
+  failing job ran at all.
+- For a failing spec, check whether that spec ran on the PR: the job's test
+  results (`/tests` endpoint) list every file that ran. Common answers:
+  - **Smart selection skipped it**: the spec was not selected for the PR's
+    diff. Say which file changed and which spec should have been related.
+  - **It ran and passed**: order-dependent or flaky (name the condition), or
+    the PR's branch was behind `main` and two PRs that were each green
+    conflict once both land. Name both PRs.
+  - **CI did not run or was not required**: merged with checks pending,
+    skipped, or on a stale run.
+  - **Not a PR at all**: a scheduled workflow, an external service, or a
+    change outside the repo.
+- If the evidence does not settle it, say what you checked and that the cause
+  is unconfirmed.
+
 ## 4. Fix it in a worktree
 
 - `wt switch -c rc/<feature>NN-<task> --base origin/main --no-cd`. Worktrees
@@ -103,6 +126,9 @@ what you found and DM Rob instead of guessing at a fix.
 - `gh pr create --draft --assignee rwc9u --label run-ci`, using the PR
   template without the Checklist. No hard wraps in the body. "No specific
   Linear ticket" plus how it was found.
+- In the Description, say how the failure reached `main`: the introducing PR
+  and why its CI was green, from "How it got into main" above. One or two
+  sentences, stated as fact only where verified.
 - Add `run-smart-analysis` when the change touches the Smarter Testing
   analysis job, since `run-ci` does not exercise it.
 - Keep open questions out of the PR body. They go in the DM.
